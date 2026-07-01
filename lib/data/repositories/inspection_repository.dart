@@ -40,6 +40,21 @@ class InspectionRepository {
       customerReference: duplicateSource?.customerReference ?? '',
       assetName: duplicateSource?.assetName ?? '',
       hpuAssetIdName: duplicateSource?.hpuAssetIdName ?? '',
+      mineSite: duplicateSource?.mineSite ?? '',
+      machineType: duplicateSource?.machineType ?? '',
+      manufacturer: duplicateSource?.manufacturer ?? '',
+      model: duplicateSource?.model ?? '',
+      serialNumber: duplicateSource?.serialNumber ?? '',
+      alternateAssetId: duplicateSource?.alternateAssetId ?? '',
+      machineHours: duplicateSource?.machineHours ?? '',
+      selectedPurposes: duplicateSource == null
+          ? <String>[]
+          : List<String>.of(duplicateSource.selectedPurposes),
+      healthScores: duplicateSource == null
+          ? <String, int>{}
+          : Map<String, int>.of(duplicateSource.healthScores),
+      assetStatus: duplicateSource?.assetStatus ?? '',
+      finalRecommendation: duplicateSource?.finalRecommendation ?? '',
       siteLocation: duplicateSource?.siteLocation ?? '',
       technicianName: duplicateSource?.technicianName ?? '',
       servicingShop: duplicateSource?.servicingShop ?? '',
@@ -79,6 +94,7 @@ class InspectionRepository {
         inspection.emailedAt == existing!.emailedAt;
     if (editedAfterEmail) {
       inspection.emailedAt = null;
+      inspection.generatedPdfPath = null;
     }
     _syncAutoActionItems(inspection);
     _refreshSectionStates(inspection);

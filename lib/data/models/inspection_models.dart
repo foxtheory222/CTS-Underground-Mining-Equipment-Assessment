@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../core/underground_template.dart';
 import 'inspection_enums.dart';
 
 typedef JsonMap = Map<String, dynamic>;
@@ -526,6 +527,23 @@ class InspectionRecord {
     this.customerReference = '',
     this.assetName = '',
     this.hpuAssetIdName = '',
+    this.templateKey = UndergroundTemplate.templateKey,
+    this.templateVersion = UndergroundTemplate.templateVersion,
+    this.appName = UndergroundTemplate.appName,
+    this.mineSite = '',
+    this.machineType = '',
+    this.manufacturer = '',
+    this.model = '',
+    this.serialNumber = '',
+    this.alternateAssetId = '',
+    this.machineHours = '',
+    this.selectedPurposes = const <String>[],
+    this.healthScores = const <String, int>{},
+    this.assetStatus = '',
+    this.finalRecommendation = '',
+    this.customerSignatureFilePath,
+    this.originalDocumentNumber,
+    this.restoredFromExportPath,
     this.siteLocation = '',
     this.technicianName = '',
     this.servicingShop = '',
@@ -556,6 +574,23 @@ class InspectionRecord {
   String customerReference;
   String assetName;
   String hpuAssetIdName;
+  String templateKey;
+  String templateVersion;
+  String appName;
+  String mineSite;
+  String machineType;
+  String manufacturer;
+  String model;
+  String serialNumber;
+  String alternateAssetId;
+  String machineHours;
+  List<String> selectedPurposes;
+  Map<String, int> healthScores;
+  String assetStatus;
+  String finalRecommendation;
+  String? customerSignatureFilePath;
+  String? originalDocumentNumber;
+  String? restoredFromExportPath;
   String siteLocation;
   String technicianName;
   String servicingShop;
@@ -587,6 +622,35 @@ class InspectionRecord {
       customerReference: json['customerReference'] as String? ?? '',
       assetName: json['assetName'] as String? ?? '',
       hpuAssetIdName: json['hpuAssetIdName'] as String? ?? '',
+      templateKey:
+          json['templateKey'] as String? ?? UndergroundTemplate.templateKey,
+      templateVersion:
+          json['templateVersion'] as String? ??
+          UndergroundTemplate.templateVersion,
+      appName: json['appName'] as String? ?? UndergroundTemplate.appName,
+      mineSite:
+          json['mineSite'] as String? ?? json['siteLocation'] as String? ?? '',
+      machineType: json['machineType'] as String? ?? '',
+      manufacturer: json['manufacturer'] as String? ?? '',
+      model: json['model'] as String? ?? '',
+      serialNumber: json['serialNumber'] as String? ?? '',
+      alternateAssetId: json['alternateAssetId'] as String? ?? '',
+      machineHours: json['machineHours'] as String? ?? '',
+      selectedPurposes:
+          (json['selectedPurposes'] as List<dynamic>? ?? <dynamic>[])
+              .map((dynamic item) => item as String)
+              .toList(growable: true),
+      healthScores:
+          (json['healthScores'] as Map<String, dynamic>? ?? <String, dynamic>{})
+              .map(
+                (String key, dynamic value) =>
+                    MapEntry<String, int>(key, (value as num).toInt()),
+              ),
+      assetStatus: json['assetStatus'] as String? ?? '',
+      finalRecommendation: json['finalRecommendation'] as String? ?? '',
+      customerSignatureFilePath: json['customerSignatureFilePath'] as String?,
+      originalDocumentNumber: json['originalDocumentNumber'] as String?,
+      restoredFromExportPath: json['restoredFromExportPath'] as String?,
       siteLocation: json['siteLocation'] as String? ?? '',
       technicianName: json['technicianName'] as String? ?? '',
       servicingShop: json['servicingShop'] as String? ?? '',
@@ -650,6 +714,23 @@ class InspectionRecord {
       'customerReference': customerReference,
       'assetName': assetName,
       'hpuAssetIdName': hpuAssetIdName,
+      'templateKey': templateKey,
+      'templateVersion': templateVersion,
+      'appName': appName,
+      'mineSite': mineSite,
+      'machineType': machineType,
+      'manufacturer': manufacturer,
+      'model': model,
+      'serialNumber': serialNumber,
+      'alternateAssetId': alternateAssetId,
+      'machineHours': machineHours,
+      'selectedPurposes': selectedPurposes,
+      'healthScores': healthScores,
+      'assetStatus': assetStatus,
+      'finalRecommendation': finalRecommendation,
+      'customerSignatureFilePath': customerSignatureFilePath,
+      'originalDocumentNumber': originalDocumentNumber,
+      'restoredFromExportPath': restoredFromExportPath,
       'siteLocation': siteLocation,
       'technicianName': technicianName,
       'servicingShop': servicingShop,

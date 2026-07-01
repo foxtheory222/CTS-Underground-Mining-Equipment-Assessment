@@ -1,6 +1,7 @@
 import '../data/models/inspection_enums.dart';
 import '../data/models/inspection_models.dart';
 import 'constants.dart';
+import 'underground_template.dart';
 
 class ValidationIssue {
   const ValidationIssue({
@@ -39,166 +40,95 @@ class InspectionValidator {
       }
     }
 
-    requireHeader(inspection.workOrderNumber, 'Work order number is required.');
     requireHeader(inspection.customer, 'Customer is required.');
+    requireHeader(inspection.mineSite, 'Mine site is required.');
+    requireHeader(inspection.machineType, 'Machine type is required.');
+    requireHeader(inspection.manufacturer, 'Manufacturer is required.');
+    requireHeader(inspection.model, 'Model is required.');
+    if (inspection.serialNumber.trim().isEmpty &&
+        inspection.alternateAssetId.trim().isEmpty) {
+      issues.add(
+        const ValidationIssue(
+          sectionKey: 'machine_identification',
+          message: 'Serial number or alternate asset ID/comment is required.',
+        ),
+      );
+    }
+    requireHeader(inspection.machineHours, 'Machine hours are required.');
+    requireHeader(inspection.technicianName, 'CTS inspector is required.');
+    if (inspection.selectedPurposes.isEmpty) {
+      issues.add(
+        const ValidationIssue(
+          sectionKey: 'machine_identification',
+          message: 'At least one purpose of inspection is required.',
+        ),
+      );
+    }
+    if (inspection.assetStatus.trim().isEmpty) {
+      issues.add(
+        const ValidationIssue(
+          sectionKey: 'machine_identification',
+          message: 'Asset status is required.',
+        ),
+      );
+    }
+    if (inspection.finalRecommendation.trim().isEmpty) {
+      issues.add(
+        const ValidationIssue(
+          sectionKey: 'final_recommendation_signoff',
+          message: 'Final CTS recommendation is required.',
+        ),
+      );
+    }
+    for (final UndergroundHealthScoreField scoreField
+        in UndergroundTemplate.healthScoreFields) {
+      final int? score = inspection.healthScores[scoreField.key];
+      if (score == null) {
+        issues.add(
+          ValidationIssue(
+            sectionKey: 'machine_identification',
+            message: '${scoreField.label} score is required.',
+          ),
+        );
+      } else if (score < scoreField.min || score > scoreField.max) {
+        issues.add(
+          ValidationIssue(
+            sectionKey: 'machine_identification',
+            message:
+                '${scoreField.label} score must be between ${scoreField.min} and ${scoreField.max}.',
+          ),
+        );
+      }
+    }
     requireHeader(inspection.assetName, 'Asset / equipment name is required.');
-    requireHeader(
-      inspection.customerReference,
-      'Customer reference / PO / job number is required.',
-    );
     requireHeader(inspection.siteLocation, 'Location / site is required.');
-    requireHeader(inspection.technicianName, 'Technician name is required.');
-    requireHeader(inspection.servicingShop, 'Servicing shop is required.');
-
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.fluidTankService,
-      itemKey: InspectionItemKeys.fluidLevel,
-      message: 'Fluid Level must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.fluidTankService,
-      itemKey: InspectionItemKeys.fluidClarity,
-      message: 'Fluid Clarity must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.fluidTankService,
-      itemKey: InspectionItemKeys.tankIntegrity,
-      message: 'Tank Integrity must be rated.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.fluidTankService,
-      itemKey: InspectionItemKeys.tankCleanoutPerformed,
-      message: 'Tank Cleanout Performed must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.hoseConnectionInspection,
-      itemKey: InspectionItemKeys.overallHoseCondition,
-      message: 'Overall Hose Condition must be rated.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.breatherPartNumber,
-      message: 'Breather Part Number is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.breatherReplaced,
-      message: 'Breather Replaced must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.pressureFilterPartNumber,
-      message: 'Pressure Filter PN is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.pressureFilterReplaced,
-      message: 'Pressure Filter Replaced must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.returnFilterPartNumber,
-      message: 'Return Filter PN is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.filtrationBreatherService,
-      itemKey: InspectionItemKeys.returnFilterReplaced,
-      message: 'Return Filter Replaced must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.equipmentRunning,
-      message: 'Running equipment status must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.pumpCompensatorSetting,
-      message: 'Pump Compensator Setting Observed is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.changePumpCompensator,
-      message: 'Pump compensator change decision must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.systemReliefSetting,
-      message: 'System Relief Setting Observed is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.changeSystemRelief,
-      message: 'System relief change decision must be answered.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.operatingTemperature,
-      message: 'Operating Temperature is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.operatingTemperatureUnit,
-      message: 'Operating Temperature unit must be selected.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.accumulatorPreCharge,
-      message: 'Accumulator Pre-charge is required.',
-    );
-    _requireAnsweredResponse(
-      inspection,
-      issues,
-      sectionKey: InspectionSectionKeys.operationalDataSystemTest,
-      itemKey: InspectionItemKeys.chargeAccumulator,
-      message: 'Accumulator charge decision must be answered.',
-    );
 
     for (final InspectionResponse response in inspection.responses) {
+      final String ratingValue = (response.value ?? '').trim().toLowerCase();
+      final bool isFair =
+          ratingValue == 'fair' ||
+          response.conditionRating == ConditionRating.monitorAtRisk;
+      final bool isPoor =
+          ratingValue == 'poor' ||
+          response.conditionRating == ConditionRating.unsatisfactory;
+      final bool isNotInspected = ratingValue == 'not inspected';
+      final bool isCritical =
+          response.conditionRating == ConditionRating.criticalOutOfService;
       final bool isFlagged =
           response.isFlagged || (response.conditionRating?.isFlagged ?? false);
-      if (!isFlagged) {
+      final bool requiresComment =
+          isFair ||
+          isPoor ||
+          isNotInspected ||
+          isCritical ||
+          response.isFlagged;
+      final bool requiresPhotoAndAction =
+          isPoor || isCritical || response.isFlagged;
+      if (!requiresComment && !requiresPhotoAndAction) {
         continue;
       }
 
-      if ((response.comment ?? '').trim().isEmpty) {
+      if (requiresComment && (response.comment ?? '').trim().isEmpty) {
         issues.add(
           ValidationIssue(
             sectionKey: response.sectionKey,
@@ -208,7 +138,12 @@ class InspectionValidator {
         );
       }
 
-      if (inspection.photosForItem(response.itemKey).isEmpty) {
+      final Iterable<InspectionPhoto> matchingPhotos = inspection.photos.where(
+        (InspectionPhoto photo) =>
+            photo.sectionKey == response.sectionKey &&
+            photo.itemKey == response.itemKey,
+      );
+      if (requiresPhotoAndAction && matchingPhotos.isEmpty) {
         issues.add(
           ValidationIssue(
             sectionKey: response.sectionKey,
@@ -218,18 +153,26 @@ class InspectionValidator {
         );
       }
 
-      final bool hasActionItem = inspection.actionItems.any((
-        ActionItem actionItem,
-      ) {
+      final bool hasActionItem = inspection.actionItems.any((actionItem) {
         return actionItem.sourceSectionKey == response.sectionKey &&
             actionItem.sourceItemKey == response.itemKey;
       });
-      if (!hasActionItem) {
+      if (requiresPhotoAndAction && !hasActionItem) {
         issues.add(
           ValidationIssue(
             sectionKey: response.sectionKey,
             itemKey: response.itemKey,
             message: '${response.itemLabel} requires a linked action item.',
+          ),
+        );
+      }
+
+      if (isCritical && !isFlagged) {
+        issues.add(
+          ValidationIssue(
+            sectionKey: response.sectionKey,
+            itemKey: response.itemKey,
+            message: '${response.itemLabel} is critical/out of service.',
           ),
         );
       }
@@ -325,7 +268,7 @@ class InspectionValidator {
         const ValidationIssue(
           sectionKey: InspectionSectionKeys.reviewCompletion,
           itemKey: InspectionItemKeys.technicianSignature,
-          message: 'Technician signature is required.',
+          message: 'Inspector signature is required.',
         ),
       );
     }
@@ -385,31 +328,5 @@ class InspectionValidator {
               (entry.filterName ?? '').trim().isNotEmpty ||
               (entry.partNumber ?? '').trim().isNotEmpty,
         );
-  }
-
-  static void _requireAnsweredResponse(
-    InspectionRecord inspection,
-    List<ValidationIssue> issues, {
-    required String sectionKey,
-    required String itemKey,
-    required String message,
-  }) {
-    final InspectionResponse? response = inspection.responseByKey(
-      sectionKey,
-      itemKey,
-    );
-    final bool answered =
-        response != null &&
-        ((response.value ?? '').trim().isNotEmpty ||
-            response.conditionRating != null);
-    if (!answered) {
-      issues.add(
-        ValidationIssue(
-          sectionKey: sectionKey,
-          itemKey: itemKey,
-          message: message,
-        ),
-      );
-    }
   }
 }

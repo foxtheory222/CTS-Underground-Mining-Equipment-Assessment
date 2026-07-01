@@ -99,11 +99,13 @@ void main() {
     final emailed = await repository.markEmailed(completed);
     expect(emailed.status, InspectionStatus.emailed);
     expect(emailed.emailedAt, isNotNull);
+    emailed.generatedPdfPath = '/tmp/generated.pdf';
 
     emailed.customer = 'Updated Customer';
     final edited = await repository.saveInspection(emailed);
 
     expect(edited.emailedAt, isNull);
+    expect(edited.generatedPdfPath, isNull);
     expect(edited.status, InspectionStatus.complete);
     expect(edited.customer, 'Updated Customer');
   });

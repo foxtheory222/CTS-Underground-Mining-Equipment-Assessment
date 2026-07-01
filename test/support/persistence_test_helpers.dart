@@ -4,6 +4,7 @@ import 'package:cts_underground_mining_assessment/data/database/app_database.dar
 import 'package:cts_underground_mining_assessment/data/models/inspection_enums.dart';
 import 'package:cts_underground_mining_assessment/data/models/inspection_models.dart';
 import 'package:cts_underground_mining_assessment/core/constants.dart';
+import 'package:cts_underground_mining_assessment/core/underground_template.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 
@@ -88,6 +89,17 @@ InspectionRecord buildInspection({
   String customerReference = 'PO-1001',
   String assetName = 'HPU-1',
   String hpuAssetIdName = 'HPU-1',
+  String mineSite = 'Plant 1',
+  String machineType = 'Rock Scaler',
+  String manufacturer = 'MacLean',
+  String model = 'SL3',
+  String serialNumber = 'RS-1001',
+  String alternateAssetId = '',
+  String machineHours = '12450',
+  List<String> selectedPurposes = const <String>['Condition Assessment'],
+  Map<String, int>? healthScores,
+  String assetStatus = 'Good',
+  String finalRecommendation = 'Continue Operating',
   String siteLocation = 'Plant 1',
   String technicianName = 'Jordan Lee',
   String servicingShop = 'CTS North Shop',
@@ -117,6 +129,22 @@ InspectionRecord buildInspection({
     customerReference: customerReference,
     assetName: assetName,
     hpuAssetIdName: hpuAssetIdName,
+    mineSite: mineSite,
+    machineType: machineType,
+    manufacturer: manufacturer,
+    model: model,
+    serialNumber: serialNumber,
+    alternateAssetId: alternateAssetId,
+    machineHours: machineHours,
+    selectedPurposes: selectedPurposes,
+    healthScores:
+        healthScores ??
+        <String, int>{
+          for (final field in UndergroundTemplate.healthScoreFields)
+            field.key: field.max,
+        },
+    assetStatus: assetStatus,
+    finalRecommendation: finalRecommendation,
     siteLocation: siteLocation,
     technicianName: technicianName,
     servicingShop: servicingShop,
