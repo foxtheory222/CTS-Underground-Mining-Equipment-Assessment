@@ -5,6 +5,7 @@ import 'package:cts_underground_mining_assessment/data/models/inspection_enums.d
 import 'package:cts_underground_mining_assessment/data/models/inspection_models.dart';
 import 'package:cts_underground_mining_assessment/core/constants.dart';
 import 'package:cts_underground_mining_assessment/core/underground_template.dart';
+import 'package:cts_underground_mining_assessment/core/validators.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 
@@ -183,6 +184,19 @@ void fillRequiredResponses(
 }) {
   final now = DateTime.utc(2026, 4, 20, 12, 0);
   inspection.responses = <InspectionResponse>[
+    for (final section in UndergroundTemplate.sections)
+      if (section.key != 'photographic_evidence' &&
+          section.key != 'final_recommendation_signoff')
+        for (final itemLabel in section.items)
+          _response(
+            inspection,
+            section.key,
+            InspectionValidator.templateItemKey(section.key, itemLabel),
+            itemLabel,
+            value: 'Good',
+            conditionRating: ConditionRating.satisfactory,
+            now: now,
+          ),
     _response(
       inspection,
       InspectionSectionKeys.fluidTankService,

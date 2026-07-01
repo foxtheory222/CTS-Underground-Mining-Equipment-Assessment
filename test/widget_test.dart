@@ -4,16 +4,25 @@ import 'package:flutter/material.dart';
 
 import 'package:cts_underground_mining_assessment/app.dart';
 import 'package:cts_underground_mining_assessment/core/underground_template.dart';
+import 'package:cts_underground_mining_assessment/core/workspace_controller.dart';
+import 'package:cts_underground_mining_assessment/core/workspace_providers.dart';
 
 void main() {
+  Widget buildTestApp() {
+    return ProviderScope(
+      overrides: [
+        workspaceProvider.overrideWith((ref) => AppWorkspaceController()),
+      ],
+      child: const CtsUndergroundMiningAssessmentApp(),
+    );
+  }
+
   testWidgets('dashboard shell renders the tablet layout', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1600, 1000));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      const ProviderScope(child: CtsUndergroundMiningAssessmentApp()),
-    );
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     expect(
@@ -29,9 +38,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1600, 1000));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      const ProviderScope(child: CtsUndergroundMiningAssessmentApp()),
-    );
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Inspections').last);
@@ -46,9 +53,7 @@ void main() {
     (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(1600, 1000));
       addTearDown(() async => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        const ProviderScope(child: CtsUndergroundMiningAssessmentApp()),
-      );
+      await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('New Inspection').first);
@@ -80,9 +85,7 @@ void main() {
     (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(1600, 1000));
       addTearDown(() async => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        const ProviderScope(child: CtsUndergroundMiningAssessmentApp()),
-      );
+      await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Settings').last);
@@ -95,6 +98,10 @@ void main() {
       );
       expect(find.text(UndergroundTemplate.templateKey), findsOneWidget);
       expect(find.text('Android tablet local-only V1'), findsOneWidget);
+      expect(find.text('App version 1.0.0+1'), findsOneWidget);
+      expect(find.text('Build profile development'), findsOneWidget);
+      expect(find.byType(SwitchListTile), findsNothing);
+      expect(find.text('Always on'), findsNWidgets(4));
     },
   );
 }

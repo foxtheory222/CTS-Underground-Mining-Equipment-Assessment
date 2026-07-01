@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme.dart';
 import 'core/workspace_models.dart';
+import 'core/workspace_providers.dart';
 import 'features/action_items/action_items_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/inspection_detail/inspection_detail_screen.dart';
@@ -29,7 +32,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   context.go('/inspections');
                   break;
                 case 2:
-                  context.go('/inspection/new');
+                  unawaited(_openNewInspection(context, ref));
                   break;
                 case 3:
                   context.go('/actions');
@@ -95,6 +98,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+Future<void> _openNewInspection(BuildContext context, Ref ref) async {
+  final inspection = await ref.read(workspaceProvider).createInspection();
+  if (context.mounted) {
+    context.go('/inspection/${inspection.id}/edit', extra: inspection);
+  }
+}
 
 int _selectedIndexForLocation(String location) {
   if (location == '/inspection/new' || location.endsWith('/edit')) {

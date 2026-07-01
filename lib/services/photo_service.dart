@@ -462,7 +462,6 @@ class PhotoService {
       inspectionId: inspectionId,
       sectionKey: sectionKey,
       itemKey: itemKey,
-      originalFileName: originalFileName,
     );
     final file = File(p.join(directory.path, fileName));
     final outputBytes = _compressToJpeg(bytes);
@@ -501,13 +500,11 @@ class PhotoService {
     required String inspectionId,
     required String sectionKey,
     required String itemKey,
-    required String originalFileName,
   }) {
     final safeSegment = FileUtils.sanitizeFileSegment(
       <String>[inspectionId, sectionKey, itemKey].join('_'),
     );
-    final extension = p.extension(originalFileName);
-    return '${safeSegment}_${DateTime.now().toUtc().millisecondsSinceEpoch}_${_uuid.v4()}${extension.isEmpty ? '.jpg' : extension}';
+    return '${safeSegment}_${DateTime.now().toUtc().millisecondsSinceEpoch}_${_uuid.v4()}.jpg';
   }
 
   int _remainingSlots(int currentPhotoCount) {

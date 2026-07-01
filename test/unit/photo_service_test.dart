@@ -139,9 +139,53 @@ void main() {
       throwsA(isA<PhotoServiceException>()),
     );
   });
+
+  test('PhotoService uses jpg extension for recompressed PNG inputs', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'photo_service_png_extension_',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    final galleryFile = await _writeTestImage(
+      tempDir.path,
+      'gallery.png',
+      format: _TestImageFormat.png,
+    );
+    final picker = FakeInspectionPhotoPicker(
+      galleryPhotos: <XFile>[XFile(galleryFile.path)],
+    );
+    final service = PhotoService(
+      photoPicker: picker,
+      documentsDirectoryProvider: () async => tempDir,
+      maxPhotosPerItem: 5,
+    );
+
+    final result = await service.addFromGallery(
+      inspectionId: 'inspection-1',
+      sectionKey: 'section',
+      itemKey: 'item',
+      currentPhotoCount: 0,
+    );
+
+    final savedPhoto = result.savedPhotos.single;
+    expect(savedPhoto.originalFileName, 'gallery.png');
+    expect(p.extension(savedPhoto.filePath).toLowerCase(), '.jpg');
+    final savedBytes = await File(savedPhoto.filePath).readAsBytes();
+    expect(savedBytes.take(2), <int>[0xff, 0xd8]);
+  });
 }
 
-Future<File> _writeTestImage(String directory, String fileName) async {
+enum _TestImageFormat { jpg, png }
+
+Future<File> _writeTestImage(
+  String directory,
+  String fileName, {
+  _TestImageFormat format = _TestImageFormat.jpg,
+}) async {
   final image = img.Image(width: 48, height: 48);
   for (var y = 0; y < image.height; y++) {
     for (var x = 0; x < image.width; x++) {
@@ -149,8 +193,10 @@ Future<File> _writeTestImage(String directory, String fileName) async {
     }
   }
   final file = File(p.join(directory, fileName));
-  await file.writeAsBytes(
-    Uint8List.fromList(img.encodeJpg(image, quality: 90)),
-  );
+  final encoded = switch (format) {
+    _TestImageFormat.jpg => img.encodeJpg(image, quality: 90),
+    _TestImageFormat.png => img.encodePng(image),
+  };
+  await file.writeAsBytes(Uint8List.fromList(encoded));
   return file;
 }

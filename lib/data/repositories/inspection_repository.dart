@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,6 +9,27 @@ import '../../services/document_number_service.dart';
 import '../database/app_database.dart';
 import '../models/inspection_enums.dart';
 import '../models/inspection_models.dart';
+
+class InspectionRepositoryException implements Exception {
+  const InspectionRepositoryException(
+    this.message, {
+    required this.code,
+    this.validationIssues = const <ValidationIssue>[],
+  });
+
+  final String message;
+  final InspectionRepositoryErrorCode code;
+  final List<ValidationIssue> validationIssues;
+
+  @override
+  String toString() => 'InspectionRepositoryException($code): $message';
+}
+
+enum InspectionRepositoryErrorCode {
+  invalidCompletion,
+  missingGeneratedPdf,
+  duplicateDocumentNumber,
+}
 
 class InspectionRepository {
   InspectionRepository({
@@ -99,6 +122,12 @@ class InspectionRepository {
     _refreshSectionStates(inspection);
     final ValidationResult validation =
         InspectionValidator.validateForCompletion(inspection);
+    if (inspection.emailedAt != null &&
+        (!validation.isValid ||
+            inspection.completedAt == null ||
+            (inspection.generatedPdfPath ?? '').trim().isEmpty)) {
+      inspection.emailedAt = null;
+    }
     if (inspection.emailedAt == null &&
         validation.isValid &&
         (inspection.signatureFilePath ?? '').trim().isNotEmpty) {
@@ -151,9 +180,58 @@ class InspectionRepository {
   }
 
   Future<InspectionRecord> markEmailed(InspectionRecord inspection) async {
+    final ValidationResult validation =
+        InspectionValidator.validateForCompletion(inspection);
+    if (!validation.isValid) {
+      throw InspectionRepositoryException(
+        'Inspection must be complete before it can be marked emailed.',
+        code: InspectionRepositoryErrorCode.invalidCompletion,
+        validationIssues: validation.issues,
+      );
+    }
+
+    final String pdfPath = (inspection.generatedPdfPath ?? '').trim();
+    if (pdfPath.isEmpty || !await File(pdfPath).exists()) {
+      throw const InspectionRepositoryException(
+        'A generated PDF must exist before the inspection can be marked emailed.',
+        code: InspectionRepositoryErrorCode.missingGeneratedPdf,
+      );
+    }
+
     inspection.emailedAt = DateTime.now();
     inspection.completedAt ??= inspection.emailedAt;
     inspection.status = InspectionStatus.emailed;
+    return saveInspection(inspection);
+  }
+
+  Future<InspectionRecord> importInspectionJson(
+    Map<String, dynamic> inspectionJson, {
+    List<File> restoredPhotoFiles = const <File>[],
+    File? restoredPdfFile,
+  }) async {
+    final Map<String, dynamic> importJson = _normalizeImportedInspectionJson(
+      inspectionJson,
+      restoredPhotoFiles: restoredPhotoFiles,
+      restoredPdfFile: restoredPdfFile,
+    );
+    final String documentNumber =
+        importJson['documentNumber']?.toString().trim() ?? '';
+    if (documentNumber.isEmpty) {
+      throw const InspectionRepositoryException(
+        'Imported inspection is missing a document number.',
+        code: InspectionRepositoryErrorCode.invalidCompletion,
+      );
+    }
+    if (await documentNumberExists(documentNumber)) {
+      throw InspectionRepositoryException(
+        'An inspection already exists with document number $documentNumber.',
+        code: InspectionRepositoryErrorCode.duplicateDocumentNumber,
+      );
+    }
+
+    final InspectionRecord inspection = InspectionRecord.fromJson(importJson);
+    inspection.emailedAt = null;
+    inspection.status = InspectionValidator.deriveStatus(inspection);
     return saveInspection(inspection);
   }
 
@@ -169,6 +247,103 @@ class InspectionRepository {
       return null;
     }
     return _rowToInspection(rows.first);
+  }
+
+  Map<String, dynamic> _normalizeImportedInspectionJson(
+    Map<String, dynamic> inspectionJson, {
+    required List<File> restoredPhotoFiles,
+    required File? restoredPdfFile,
+  }) {
+    final DateTime now = DateTime.now();
+    final String inspectionId = _uuid.v4();
+    final Map<String, dynamic> normalized = Map<String, dynamic>.from(
+      inspectionJson,
+    );
+    normalized['id'] = inspectionId;
+    normalized['status'] =
+        normalized['status']?.toString() ?? InspectionStatus.draft.value;
+    normalized['inspectionDateTime'] =
+        normalized['inspectionDateTime']?.toString() ?? now.toIso8601String();
+    normalized['createdAt'] =
+        normalized['createdAt']?.toString() ?? now.toIso8601String();
+    normalized['updatedAt'] = now.toIso8601String();
+    normalized['completedAt'] = null;
+    normalized['emailedAt'] = null;
+    if (restoredPdfFile != null) {
+      normalized['generatedPdfPath'] = restoredPdfFile.path;
+    }
+
+    normalized['sections'] = _rehomeImportedChildren(
+      normalized['sections'],
+      inspectionId,
+      idBuilder: (Map<String, dynamic> child) =>
+          '${inspectionId}_${child['sectionKey'] ?? _uuid.v4()}',
+    );
+    normalized['responses'] = _rehomeImportedChildren(
+      normalized['responses'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    normalized['actionItems'] = _rehomeImportedChildren(
+      normalized['actionItems'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    normalized['hoseEntries'] = _rehomeImportedChildren(
+      normalized['hoseEntries'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    normalized['componentEntries'] = _rehomeImportedChildren(
+      normalized['componentEntries'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    normalized['filterEntries'] = _rehomeImportedChildren(
+      normalized['filterEntries'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    normalized['requiredItems'] = _rehomeImportedChildren(
+      normalized['requiredItems'],
+      inspectionId,
+      regenerateIds: true,
+    );
+
+    final List<Map<String, dynamic>> photos = _rehomeImportedChildren(
+      normalized['photos'],
+      inspectionId,
+      regenerateIds: true,
+    );
+    for (var index = 0; index < photos.length; index++) {
+      if (index < restoredPhotoFiles.length) {
+        photos[index]['filePath'] = restoredPhotoFiles[index].path;
+      }
+    }
+    normalized['photos'] = photos;
+
+    return normalized;
+  }
+
+  List<Map<String, dynamic>> _rehomeImportedChildren(
+    Object? children,
+    String inspectionId, {
+    bool regenerateIds = false,
+    String Function(Map<String, dynamic> child)? idBuilder,
+  }) {
+    return (children as List<dynamic>? ?? <dynamic>[])
+        .map((dynamic child) {
+          final Map<String, dynamic> normalizedChild =
+              Map<String, dynamic>.from(child as Map);
+          normalizedChild['inspectionId'] = inspectionId;
+          if (idBuilder != null) {
+            normalizedChild['id'] = idBuilder(normalizedChild);
+          } else if (regenerateIds) {
+            normalizedChild['id'] = _uuid.v4();
+          }
+          return normalizedChild;
+        })
+        .toList(growable: true);
   }
 
   Future<List<InspectionRecord>> search(InspectionSearchQuery query) async {

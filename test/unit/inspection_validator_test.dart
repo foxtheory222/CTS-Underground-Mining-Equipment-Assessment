@@ -58,7 +58,7 @@ void main() {
     },
   );
 
-  test('completion passes with required mining metadata and signoff', () {
+  test('completion requires saved responses for required template items', () {
     final inspection = buildInspection(
       id: 'inspection-mining-complete',
       documentNumber: '20260420-0002',
@@ -75,8 +75,45 @@ void main() {
 
     final result = InspectionValidator.validateForCompletion(inspection);
 
-    expect(result.isValid, isTrue);
+    expect(result.isValid, isFalse);
+    expect(
+      result.issues.map((issue) => issue.message),
+      contains('SECTION 1 - MACHINE IDENTIFICATION requires OEM.'),
+    );
   });
+
+  test(
+    'emailed timestamp does not override missing completion or PDF state',
+    () {
+      final incomplete = buildInspection(
+        id: 'inspection-email-incomplete',
+        documentNumber: '20260420-0020',
+        status: InspectionStatus.inProgress,
+        customer: '',
+        emailedAt: DateTime.utc(2026, 4, 20, 13, 0),
+      );
+
+      expect(
+        InspectionValidator.deriveStatus(incomplete),
+        isNot(InspectionStatus.emailed),
+      );
+
+      final completeWithoutPdf = buildInspection(
+        id: 'inspection-email-without-pdf',
+        documentNumber: '20260420-0021',
+        status: InspectionStatus.inProgress,
+        signatureFilePath: '/tmp/signature.png',
+        completedAt: DateTime.utc(2026, 4, 20, 12, 30),
+        emailedAt: DateTime.utc(2026, 4, 20, 13, 0),
+      );
+      fillRequiredResponses(completeWithoutPdf);
+
+      expect(
+        InspectionValidator.deriveStatus(completeWithoutPdf),
+        InspectionStatus.complete,
+      );
+    },
+  );
 
   test(
     'global item ratings enforce comment photo action and critical rules',

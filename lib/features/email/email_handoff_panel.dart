@@ -66,6 +66,12 @@ class EmailHandoffPanel extends StatelessWidget {
                   )
                   .toList(growable: false),
             ),
+            if (selectedRecipients.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Selected recipients are added to the share text as suggestions. Choose or enter them in the email app before sending.',
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               'Recent recipients',

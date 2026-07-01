@@ -1,20 +1,41 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'constants.dart';
 import 'theme.dart';
 import '../data/models/inspection_enums.dart';
+import '../data/models/inspection_models.dart';
+import '../data/repositories/inspection_repository.dart';
+import '../services/backup_service.dart';
 import 'workspace_models.dart';
 
 class AppWorkspaceController extends ChangeNotifier {
-  AppWorkspaceController() : _inspections = _seedInspections();
+  AppWorkspaceController({
+    InspectionRepository? repository,
+    bool autoLoad = true,
+    List<InspectionSummary>? seedInspections,
+  }) : _repository = repository,
+       _inspections =
+           seedInspections ??
+           (repository == null ? _seedInspections() : <InspectionSummary>[]) {
+    if (_repository != null && autoLoad) {
+      unawaited(refresh());
+    }
+  }
 
+  final InspectionRepository? _repository;
   final List<InspectionSummary> _inspections;
   String _searchQuery = '';
   InspectionStatus? _statusFilter;
+  bool _isLoading = false;
+  Object? _lastError;
 
   String get searchQuery => _searchQuery;
   InspectionStatus? get statusFilter => _statusFilter;
+  bool get isLoading => _isLoading;
+  Object? get lastError => _lastError;
 
   List<InspectionSummary> get inspections => List.unmodifiable(_inspections);
 
@@ -127,7 +148,37 @@ class AppWorkspaceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  InspectionSummary createInspection() {
+  Future<void> refresh() async {
+    final repository = _repository;
+    if (repository == null) {
+      return;
+    }
+
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final records = await repository.allInspections();
+      _inspections
+        ..clear()
+        ..addAll(records.map(_summaryFromRecord));
+    } catch (error) {
+      _lastError = error;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<InspectionSummary> createInspection({DateTime? createdAt}) async {
+    final repository = _repository;
+    if (repository != null) {
+      final record = await repository.createInspection(createdAt: createdAt);
+      final summary = _summaryFromRecord(record);
+      _upsertSummary(summary, insertAtTop: true);
+      return summary;
+    }
+
     final now = DateTime.now();
     final documentNumber = _nextDocumentNumberForDate(now);
     final inspection = InspectionSummary(
@@ -158,7 +209,25 @@ class AppWorkspaceController extends ChangeNotifier {
     return inspection;
   }
 
-  InspectionSummary duplicateInspection(InspectionSummary source) {
+  Future<InspectionSummary> duplicateInspection(
+    InspectionSummary source, {
+    DateTime? createdAt,
+  }) async {
+    final repository = _repository;
+    if (repository != null) {
+      final sourceRecord = await repository.getInspection(source.id);
+      if (sourceRecord == null) {
+        throw StateError('Inspection not found for duplicate: ${source.id}');
+      }
+      final record = await repository.duplicateInspection(
+        sourceRecord,
+        createdAt: createdAt,
+      );
+      final summary = _summaryFromRecord(record);
+      _upsertSummary(summary, insertAtTop: true);
+      return summary;
+    }
+
     final now = DateTime.now();
     final documentNumber = _nextDocumentNumberForDate(now);
     final clone = source.copyWith(
@@ -193,6 +262,182 @@ class AppWorkspaceController extends ChangeNotifier {
       _inspections[index] = updated;
       notifyListeners();
     }
+  }
+
+  Future<InspectionSummary> importInspection(
+    BackupImportResult importResult,
+  ) async {
+    final repository = _repository;
+    if (repository == null) {
+      throw StateError('Import persistence requires an inspection repository.');
+    }
+    final record = await repository.importInspectionJson(
+      importResult.inspectionJson,
+      restoredPhotoFiles: importResult.restoredPhotoFiles,
+      restoredPdfFile: importResult.restoredPdfFile,
+    );
+    final summary = _summaryFromRecord(record);
+    _upsertSummary(summary, insertAtTop: true);
+    return summary;
+  }
+
+  void _upsertSummary(InspectionSummary summary, {required bool insertAtTop}) {
+    final index = _inspections.indexWhere((item) => item.id == summary.id);
+    if (index == -1) {
+      if (insertAtTop) {
+        _inspections.insert(0, summary);
+      } else {
+        _inspections.add(summary);
+      }
+    } else {
+      _inspections[index] = summary;
+    }
+    notifyListeners();
+  }
+
+  InspectionSummary _summaryFromRecord(InspectionRecord record) {
+    return InspectionSummary(
+      id: record.id,
+      documentNumber: record.documentNumber,
+      customer: record.customer,
+      workOrderNumber: record.workOrderNumber,
+      customerReference: record.customerReference,
+      assetName: record.assetName.isEmpty
+          ? record.serialNumber
+          : record.assetName,
+      siteLocation: record.siteLocation.isEmpty
+          ? record.mineSite
+          : record.siteLocation,
+      technicianName: record.technicianName,
+      servicingShop: record.servicingShop,
+      inspectionDateTime: record.inspectionDateTime,
+      createdAt: record.createdAt,
+      status: record.status,
+      sections: _sectionsFromRecord(record),
+      actionItems: record.actionItems
+          .map((actionItem) => _actionItemFromRecord(record, actionItem))
+          .toList(growable: false),
+      photos: record.photos
+          .map((photo) => _photoFromRecord(record, photo))
+          .toList(growable: false),
+      flaggedCount: record.flaggedItemCount,
+      atRiskCount: record.atRiskCount,
+      unsatisfactoryCount: record.unsatisfactoryCount,
+      criticalCount: record.criticalCount,
+      photoCount: record.photoCount,
+      lastUpdatedAt: record.updatedAt,
+      completedAt: record.completedAt,
+      emailedAt: record.emailedAt,
+      finalTechComments: record.finalTechComments,
+      criticalAcknowledged: record.criticalAcknowledged,
+      generatedPdfPath: record.generatedPdfPath,
+    );
+  }
+
+  List<InspectionSectionView> _sectionsFromRecord(InspectionRecord record) {
+    if (record.sections.isEmpty) {
+      return _defaultSections(
+        atRisk: record.atRiskCount,
+        unsat: record.unsatisfactoryCount,
+        critical: record.criticalCount,
+        photoCount: record.photoCount,
+      );
+    }
+    return record.sections
+        .map((section) {
+          final flaggedCount = record.responses
+              .where(
+                (response) =>
+                    response.sectionKey == section.sectionKey &&
+                    (response.isFlagged ||
+                        (response.conditionRating?.isFlagged ?? false)),
+              )
+              .length;
+          final criticalWarning = record.responses.any(
+            (response) =>
+                response.sectionKey == section.sectionKey &&
+                response.conditionRating ==
+                    ConditionRating.criticalOutOfService,
+          );
+          final photoCount = record.photos
+              .where((photo) => photo.sectionKey == section.sectionKey)
+              .length;
+          return InspectionSectionView(
+            key: section.sectionKey,
+            title: section.title,
+            completionState: section.completionState,
+            summary: _summaryForSectionState(section.completionState),
+            photoCount: photoCount,
+            flaggedCount: flaggedCount,
+            criticalWarning: criticalWarning,
+          );
+        })
+        .toList(growable: false);
+  }
+
+  InspectionActionItemView _actionItemFromRecord(
+    InspectionRecord record,
+    ActionItem actionItem,
+  ) {
+    return InspectionActionItemView(
+      title: actionItem.title,
+      description: actionItem.description,
+      conditionRating:
+          actionItem.conditionRating ?? ConditionRating.monitorAtRisk,
+      sourceSection: _sectionTitle(record, actionItem.sourceSectionKey),
+      sourceItem: _itemLabel(record, actionItem.sourceItemKey),
+      partsRequired: actionItem.partsRequired,
+      isAutoGenerated: actionItem.isAutoGenerated,
+    );
+  }
+
+  InspectionPhotoView _photoFromRecord(
+    InspectionRecord record,
+    InspectionPhoto photo,
+  ) {
+    return InspectionPhotoView(
+      assetPath: photo.filePath,
+      caption: photo.caption?.trim().isEmpty ?? true
+          ? 'Inspection photo'
+          : photo.caption!,
+      sectionTitle: _sectionTitle(record, photo.sectionKey),
+      itemLabel: _itemLabel(record, photo.itemKey),
+      capturedAt: photo.capturedAt,
+    );
+  }
+
+  String _sectionTitle(InspectionRecord record, String? sectionKey) {
+    if (sectionKey == null) {
+      return 'Inspection';
+    }
+    for (final section in record.sections) {
+      if (section.sectionKey == sectionKey) {
+        return section.title;
+      }
+    }
+    return inspectionSectionTitles[sectionKey] ?? sectionKey;
+  }
+
+  String _itemLabel(InspectionRecord record, String? itemKey) {
+    if (itemKey == null) {
+      return 'Inspection item';
+    }
+    for (final response in record.responses) {
+      if (response.itemKey == itemKey) {
+        return response.itemLabel;
+      }
+    }
+    return itemKey;
+  }
+
+  String _summaryForSectionState(SectionCompletionState state) {
+    return switch (state) {
+      SectionCompletionState.notStarted => 'No saved entries yet.',
+      SectionCompletionState.inProgress => 'Saved work remains in progress.',
+      SectionCompletionState.complete => 'Section validation is complete.',
+      SectionCompletionState.blocked =>
+        'Section needs attention before signoff.',
+    };
   }
 
   String _nextDocumentNumberForDate(DateTime date) {

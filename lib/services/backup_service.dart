@@ -181,6 +181,7 @@ class BackupService {
     }
 
     final archiveBytes = await archiveFile.readAsBytes();
+    _validateZipCentralDirectory(archiveBytes);
     final decoded = ZipDecoder().decodeBytes(archiveBytes, verify: true);
     final importRoot = await _buildImportDirectory();
     final restoreFolder = Directory(
@@ -193,34 +194,49 @@ class BackupService {
     );
     await restoreFolder.create(recursive: true);
 
+    final archiveFiles = decoded.where((file) => file.isFile).toList();
+    final validatedEntryNames = <ArchiveFile, String>{};
+    var inspectionJsonCount = 0;
+    for (final file in archiveFiles) {
+      final entryName = _validatedArchiveEntryName(file.name);
+      if (entryName == 'inspection.json') {
+        inspectionJsonCount++;
+      }
+      validatedEntryNames[file] = entryName;
+    }
+    if (inspectionJsonCount != 1) {
+      throw BackupServiceException(
+        inspectionJsonCount == 0
+            ? 'Archive did not contain inspection.json.'
+            : 'Archive contained more than one inspection.json.',
+        code: inspectionJsonCount == 0
+            ? BackupServiceErrorCode.json
+            : BackupServiceErrorCode.archive,
+      );
+    }
+
     Map<String, dynamic>? inspectionJson;
     final restoredPhotos = <File>[];
     File? restoredPdf;
     final warnings = <String>[];
 
-    for (final file in decoded) {
-      if (!file.isFile) {
-        continue;
-      }
-
-      final outputPath = p.join(
-        restoreFolder.path,
-        file.name.replaceAll('/', Platform.pathSeparator),
-      );
-      final outputFile = File(outputPath);
+    for (final file in archiveFiles) {
+      final entryName = validatedEntryNames[file]!;
+      final outputFile = _restoreFileForEntry(restoreFolder, entryName);
       await outputFile.parent.create(recursive: true);
       await outputFile.writeAsBytes(file.content as List<int>, flush: true);
 
-      if (file.name == 'inspection.json') {
-        inspectionJson = _decodeInspectionJson(outputFile);
-      } else if (file.name.startsWith('photos/')) {
+      if (entryName == 'inspection.json') {
+        inspectionJson = _decodeInspectionJsonBytes(file.content as List<int>);
+      } else if (entryName.startsWith('photos/')) {
         restoredPhotos.add(outputFile);
-      } else if (file.name.startsWith('generated_pdf/')) {
+      } else if (entryName.startsWith('generated_pdf/')) {
         restoredPdf = outputFile;
       }
     }
 
-    if (inspectionJson == null) {
+    final importedInspectionJson = inspectionJson;
+    if (importedInspectionJson == null) {
       throw BackupServiceException(
         'Archive did not contain inspection.json.',
         code: BackupServiceErrorCode.json,
@@ -228,7 +244,7 @@ class BackupService {
     }
 
     final originalDocumentNumber =
-        inspectionJson['documentNumber']?.toString().trim() ?? '';
+        importedInspectionJson['documentNumber']?.toString().trim() ?? '';
     if (originalDocumentNumber.isEmpty) {
       throw BackupServiceException(
         'Imported inspection is missing a document number.',
@@ -236,7 +252,7 @@ class BackupService {
       );
     }
 
-    inspectionJson
+    importedInspectionJson
       ..putIfAbsent('templateKey', () => UndergroundTemplate.templateKey)
       ..putIfAbsent(
         'templateVersion',
@@ -251,8 +267,8 @@ class BackupService {
       documentNumber =
           conflictResolver?.call(originalDocumentNumber) ??
           _generateImportedDocumentNumber(originalDocumentNumber);
-      inspectionJson['documentNumber'] = documentNumber;
-      inspectionJson['originalDocumentNumber'] = originalDocumentNumber;
+      importedInspectionJson['documentNumber'] = documentNumber;
+      importedInspectionJson['originalDocumentNumber'] = originalDocumentNumber;
       documentNumberChanged = true;
       warnings.add(
         'Document number conflict resolved by importing as $documentNumber.',
@@ -260,7 +276,7 @@ class BackupService {
     }
 
     return BackupImportResult(
-      inspectionJson: inspectionJson,
+      inspectionJson: importedInspectionJson,
       restoredPhotoFiles: restoredPhotos,
       restoredPdfFile: restoredPdf,
       documentNumber: documentNumber,
@@ -298,9 +314,149 @@ class BackupService {
     };
   }
 
-  Map<String, dynamic> _decodeInspectionJson(File file) {
+  String _validatedArchiveEntryName(String rawName) {
+    final normalizedSeparators = rawName.replaceAll('\\', '/');
+    final segments = normalizedSeparators.split('/');
+    final isWindowsAbsolute = RegExp(
+      r'^[A-Za-z]:/',
+    ).hasMatch(normalizedSeparators);
+
+    if (normalizedSeparators.trim().isEmpty ||
+        p.posix.isAbsolute(normalizedSeparators) ||
+        isWindowsAbsolute ||
+        segments.any(
+          (segment) => segment.isEmpty || segment == '.' || segment == '..',
+        )) {
+      throw BackupServiceException(
+        'Archive contains an unsafe entry path: $rawName',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+
+    final normalized = p.posix.normalize(normalizedSeparators);
+    final isAllowed =
+        normalized == 'inspection.json' ||
+        normalized == 'manifest.json' ||
+        (normalized.startsWith('photos/') &&
+            normalized.length > 'photos/'.length) ||
+        (normalized.startsWith('generated_pdf/') &&
+            normalized.length > 'generated_pdf/'.length);
+    if (!isAllowed) {
+      throw BackupServiceException(
+        'Archive contains an unsupported entry: $rawName',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+
+    return normalized;
+  }
+
+  File _restoreFileForEntry(Directory restoreFolder, String entryName) {
+    final outputPath = p.joinAll(<String>[
+      restoreFolder.path,
+      ...entryName.split('/'),
+    ]);
+    final rootPath = p.canonicalize(restoreFolder.path);
+    final candidatePath = p.canonicalize(outputPath);
+    if (!p.equals(rootPath, candidatePath) &&
+        !p.isWithin(rootPath, candidatePath)) {
+      throw BackupServiceException(
+        'Archive entry would restore outside the import folder: $entryName',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+    return File(outputPath);
+  }
+
+  void _validateZipCentralDirectory(List<int> archiveBytes) {
+    final endOfCentralDirectory = _findEndOfCentralDirectory(archiveBytes);
+    if (endOfCentralDirectory == -1) {
+      throw BackupServiceException(
+        'Archive did not contain a valid ZIP directory.',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+
+    final entryCount = _readUint16(archiveBytes, endOfCentralDirectory + 10);
+    final centralDirectoryOffset = _readUint32(
+      archiveBytes,
+      endOfCentralDirectory + 16,
+    );
+    var cursor = centralDirectoryOffset;
+    final seenEntryNames = <String>{};
+
+    for (var index = 0; index < entryCount; index++) {
+      if (cursor + 46 > archiveBytes.length ||
+          _readUint32(archiveBytes, cursor) != 0x02014b50) {
+        throw BackupServiceException(
+          'Archive central directory was malformed.',
+          code: BackupServiceErrorCode.archive,
+        );
+      }
+
+      final nameLength = _readUint16(archiveBytes, cursor + 28);
+      final extraLength = _readUint16(archiveBytes, cursor + 30);
+      final commentLength = _readUint16(archiveBytes, cursor + 32);
+      final nameStart = cursor + 46;
+      final nameEnd = nameStart + nameLength;
+      if (nameEnd > archiveBytes.length) {
+        throw BackupServiceException(
+          'Archive central directory entry was truncated.',
+          code: BackupServiceErrorCode.archive,
+        );
+      }
+
+      final rawName = utf8.decode(archiveBytes.sublist(nameStart, nameEnd));
+      if (!rawName.endsWith('/')) {
+        final entryName = _validatedArchiveEntryName(rawName);
+        if (!seenEntryNames.add(entryName)) {
+          throw BackupServiceException(
+            'Archive contains duplicate entry: $rawName',
+            code: BackupServiceErrorCode.archive,
+          );
+        }
+      }
+
+      cursor = nameEnd + extraLength + commentLength;
+    }
+  }
+
+  int _findEndOfCentralDirectory(List<int> bytes) {
+    final minimumOffset = bytes.length > 66000 ? bytes.length - 66000 : 0;
+    for (var index = bytes.length - 22; index >= minimumOffset; index--) {
+      if (_readUint32(bytes, index) == 0x06054b50) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  int _readUint16(List<int> bytes, int offset) {
+    if (offset < 0 || offset + 2 > bytes.length) {
+      throw BackupServiceException(
+        'Archive ended unexpectedly.',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+    return bytes[offset] | (bytes[offset + 1] << 8);
+  }
+
+  int _readUint32(List<int> bytes, int offset) {
+    if (offset < 0 || offset + 4 > bytes.length) {
+      throw BackupServiceException(
+        'Archive ended unexpectedly.',
+        code: BackupServiceErrorCode.archive,
+      );
+    }
+    return bytes[offset] |
+        (bytes[offset + 1] << 8) |
+        (bytes[offset + 2] << 16) |
+        (bytes[offset + 3] << 24);
+  }
+
+  Map<String, dynamic> _decodeInspectionJsonBytes(List<int> bytes) {
     try {
-      final decoded = jsonDecode(file.readAsStringSync());
+      final decoded = jsonDecode(utf8.decode(bytes));
       if (decoded is Map<String, dynamic>) {
         return decoded;
       }

@@ -9,6 +9,8 @@ import '../../core/file_utils.dart';
 class AppDatabase {
   AppDatabase();
 
+  static const int schemaVersion = 1;
+
   Database? _database;
 
   Future<Database> open() async {
@@ -23,10 +25,22 @@ class AppDatabase {
 
     _database = await openDatabase(
       dbPath,
-      version: 1,
-      onCreate: (Database db, int version) async {
-        await db.execute('''
-          CREATE TABLE inspections(
+      version: schemaVersion,
+      onCreate: _createSchema,
+      onUpgrade: _migrateSchema,
+    );
+
+    return _database!;
+  }
+
+  Future<void> close() async {
+    await _database?.close();
+    _database = null;
+  }
+
+  Future<void> _createSchema(Database db, int version) async {
+    await db.execute('''
+	          CREATE TABLE inspections(
             id TEXT PRIMARY KEY,
             document_number TEXT NOT NULL UNIQUE,
             status TEXT NOT NULL,
@@ -50,15 +64,15 @@ class AppDatabase {
           )
         ''');
 
-        await db.execute('''
-          CREATE TABLE document_sequences(
+    await db.execute('''
+	          CREATE TABLE document_sequences(
             date_key TEXT PRIMARY KEY,
             last_sequence INTEGER NOT NULL
           )
         ''');
 
-        await db.execute('''
-          CREATE TABLE email_recipients(
+    await db.execute('''
+	          CREATE TABLE email_recipients(
             id TEXT PRIMARY KEY,
             email TEXT NOT NULL,
             customer TEXT,
@@ -68,38 +82,45 @@ class AppDatabase {
           )
         ''');
 
-        await db.execute(
-          'CREATE INDEX idx_inspections_status ON inspections(status)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_updated ON inspections(updated_at DESC)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_document_number ON inspections(document_number)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_customer ON inspections(customer)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_work_order_number ON inspections(work_order_number)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_asset_name ON inspections(asset_name)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_technician_name ON inspections(technician_name)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_inspections_inspection_date_time ON inspections(inspection_date_time)',
-        );
-      },
-    );
-
-    return _database!;
+    await _createIndexes(db);
   }
 
-  Future<void> close() async {
-    await _database?.close();
-    _database = null;
+  Future<void> _migrateSchema(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 1) {
+      await _createSchema(db, newVersion);
+      return;
+    }
+    await _createIndexes(db);
+  }
+
+  Future<void> _createIndexes(Database db) async {
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_updated ON inspections(updated_at DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_document_number ON inspections(document_number)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_customer ON inspections(customer)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_work_order_number ON inspections(work_order_number)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_asset_name ON inspections(asset_name)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_technician_name ON inspections(technician_name)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_inspection_date_time ON inspections(inspection_date_time)',
+    );
   }
 }

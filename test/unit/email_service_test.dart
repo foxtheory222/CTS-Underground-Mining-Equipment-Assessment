@@ -75,7 +75,12 @@ void main() {
 
       expect(result.launched, isTrue);
       expect(adapter.lastSharedPdf?.path, pdfFile.path);
+      expect(
+        adapter.lastBody,
+        contains('Suggested recipients: tech@example.com'),
+      );
       expect(result.recipients, contains('tech@example.com'));
+      expect(result.recipientsAreSuggestions, isTrue);
       expect(await service.customerRecipient('CTS'), 'tech@example.com');
     },
   );

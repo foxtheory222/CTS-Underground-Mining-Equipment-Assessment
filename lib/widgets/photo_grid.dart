@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
@@ -72,7 +74,9 @@ class _PhotoCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(photo.assetPath, fit: BoxFit.cover),
+                  photo.assetPath.startsWith('assets/')
+                      ? Image.asset(photo.assetPath, fit: BoxFit.cover)
+                      : Image.file(File(photo.assetPath), fit: BoxFit.cover),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

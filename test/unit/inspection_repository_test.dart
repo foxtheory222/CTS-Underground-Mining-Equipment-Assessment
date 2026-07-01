@@ -84,6 +84,10 @@ void main() {
   );
 
   test('saving an emailed inspection clears emailed state on edit', () async {
+    final pdfFile = File(
+      '${tempDir.path}${Platform.pathSeparator}generated.pdf',
+    );
+    await pdfFile.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
     final inspection = buildInspection(
       id: 'save-edit',
       documentNumber: '20260420-0002',
@@ -95,11 +99,11 @@ void main() {
 
     final completed = await repository.saveInspection(inspection);
     expect(completed.status, InspectionStatus.complete);
+    completed.generatedPdfPath = pdfFile.path;
 
     final emailed = await repository.markEmailed(completed);
     expect(emailed.status, InspectionStatus.emailed);
     expect(emailed.emailedAt, isNotNull);
-    emailed.generatedPdfPath = '/tmp/generated.pdf';
 
     emailed.customer = 'Updated Customer';
     final edited = await repository.saveInspection(emailed);
@@ -109,6 +113,60 @@ void main() {
     expect(edited.status, InspectionStatus.complete);
     expect(edited.customer, 'Updated Customer');
   });
+
+  test('markEmailed rejects incomplete inspections', () async {
+    final inspection = buildInspection(
+      id: 'email-incomplete',
+      documentNumber: '20260420-0005',
+      status: InspectionStatus.inProgress,
+      customer: '',
+      signatureFilePath: null,
+    );
+    final pdfFile = File(
+      '${tempDir.path}${Platform.pathSeparator}generated.pdf',
+    );
+    await pdfFile.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+    inspection.generatedPdfPath = pdfFile.path;
+
+    await expectLater(
+      () => repository.markEmailed(inspection),
+      throwsA(
+        isA<InspectionRepositoryException>().having(
+          (InspectionRepositoryException error) => error.code,
+          'code',
+          InspectionRepositoryErrorCode.invalidCompletion,
+        ),
+      ),
+    );
+  });
+
+  test(
+    'markEmailed rejects complete inspections without a generated PDF',
+    () async {
+      final inspection = buildInspection(
+        id: 'email-no-pdf',
+        documentNumber: '20260420-0006',
+        status: InspectionStatus.inProgress,
+      );
+      fillRequiredResponses(inspection);
+      inspection.signatureFilePath = '/tmp/signature.png';
+      inspection.completedAt = DateTime.utc(2026, 4, 20, 12, 30);
+
+      final completed = await repository.saveInspection(inspection);
+      expect(completed.status, InspectionStatus.complete);
+
+      await expectLater(
+        () => repository.markEmailed(completed),
+        throwsA(
+          isA<InspectionRepositoryException>().having(
+            (InspectionRepositoryException error) => error.code,
+            'code',
+            InspectionRepositoryErrorCode.missingGeneratedPdf,
+          ),
+        ),
+      );
+    },
+  );
 
   test(
     'search finds inspections by work order, customer, asset, document, and technician',
@@ -153,6 +211,60 @@ void main() {
           const InspectionSearchQuery(term: 'Taylor Smith'),
         ),
         hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'importInspectionJson persists imported records and restored media',
+    () async {
+      final restoredPhoto = File(
+        '${tempDir.path}${Platform.pathSeparator}restored-photo.jpg',
+      );
+      await restoredPhoto.writeAsBytes(<int>[
+        0xff,
+        0xd8,
+        0xff,
+        0xd9,
+      ], flush: true);
+      final restoredPdf = File(
+        '${tempDir.path}${Platform.pathSeparator}restored-report.pdf',
+      );
+      await restoredPdf.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+      final source = buildInspection(
+        id: 'source-import',
+        documentNumber: '20260420-0900',
+        status: InspectionStatus.inProgress,
+        generatedPdfPath: '/old/generated.pdf',
+        photos: <InspectionPhoto>[
+          InspectionPhoto(
+            id: 'source-photo',
+            inspectionId: 'source-import',
+            sectionKey: InspectionSectionKeys.fluidTankService,
+            itemKey: InspectionItemKeys.tankIntegrity,
+            filePath: '/old/photo.jpg',
+            caption: 'Before import',
+            sortOrder: 0,
+            capturedAt: DateTime.utc(2026, 4, 20, 12),
+            createdAt: DateTime.utc(2026, 4, 20, 12),
+          ),
+        ],
+      );
+
+      final imported = await repository.importInspectionJson(
+        source.toJson(),
+        restoredPhotoFiles: <File>[restoredPhoto],
+        restoredPdfFile: restoredPdf,
+      );
+
+      expect(imported.id, isNot('source-import'));
+      expect(imported.documentNumber, '20260420-0900');
+      expect(imported.photos.single.inspectionId, imported.id);
+      expect(imported.photos.single.filePath, restoredPhoto.path);
+      expect(imported.generatedPdfPath, restoredPdf.path);
+      expect(
+        await repository.getInspectionByDocumentNumber('20260420-0900'),
+        isNotNull,
       );
     },
   );

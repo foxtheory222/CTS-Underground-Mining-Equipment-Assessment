@@ -93,7 +93,19 @@ class _InspectionListScreenState extends ConsumerState<InspectionListScreen> {
                     const SizedBox(width: 18),
                     SizedBox(
                       width: 360,
-                      child: _SummaryPanel(results: inspections),
+                      child: _SummaryPanel(
+                        results: inspections,
+                        onNewInspection: () async {
+                          final inspection = await controller
+                              .createInspection();
+                          if (context.mounted) {
+                            context.go(
+                              '/inspection/${inspection.id}/edit',
+                              extra: inspection,
+                            );
+                          }
+                        },
+                      ),
                     ),
                   ],
                 );
@@ -102,7 +114,18 @@ class _InspectionListScreenState extends ConsumerState<InspectionListScreen> {
                 children: [
                   _InspectionList(results: inspections),
                   const SizedBox(height: 18),
-                  _SummaryPanel(results: inspections),
+                  _SummaryPanel(
+                    results: inspections,
+                    onNewInspection: () async {
+                      final inspection = await controller.createInspection();
+                      if (context.mounted) {
+                        context.go(
+                          '/inspection/${inspection.id}/edit',
+                          extra: inspection,
+                        );
+                      }
+                    },
+                  ),
                 ],
               );
             },
@@ -239,9 +262,10 @@ class _InspectionTile extends StatelessWidget {
 }
 
 class _SummaryPanel extends StatelessWidget {
-  const _SummaryPanel({required this.results});
+  const _SummaryPanel({required this.results, required this.onNewInspection});
 
   final List<InspectionSummary> results;
+  final VoidCallback onNewInspection;
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +310,7 @@ class _SummaryPanel extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 10),
           FilledButton.icon(
-            onPressed: () => context.go('/inspection/new'),
+            onPressed: onNewInspection,
             icon: const Icon(Icons.add),
             label: const Text('New Inspection'),
           ),

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_build_metadata.dart';
 import '../../core/theme.dart';
 import '../../core/underground_template.dart';
 import '../../widgets/section_card.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({
+    super.key,
+    this.buildMetadata = AppBuildMetadata.current,
+  });
+
+  final AppBuildMetadata buildMetadata;
 
   @override
   Widget build(BuildContext context) {
@@ -35,17 +41,20 @@ class SettingsScreen extends StatelessWidget {
               return wide
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Expanded(child: _SettingsPanel()),
-                        SizedBox(width: 18),
-                        SizedBox(width: 360, child: _AboutPanel()),
+                      children: [
+                        const Expanded(child: _SettingsPanel()),
+                        const SizedBox(width: 18),
+                        SizedBox(
+                          width: 360,
+                          child: _AboutPanel(buildMetadata: buildMetadata),
+                        ),
                       ],
                     )
-                  : const Column(
+                  : Column(
                       children: [
-                        _SettingsPanel(),
-                        SizedBox(height: 18),
-                        _AboutPanel(),
+                        const _SettingsPanel(),
+                        const SizedBox(height: 18),
+                        _AboutPanel(buildMetadata: buildMetadata),
                       ],
                     );
             },
@@ -65,44 +74,34 @@ class _SettingsPanel extends StatelessWidget {
       title: 'Workflow Preferences',
       subtitle: 'These settings align the UI to the current V1 tablet scope.',
       child: Column(
-        children: [
-          SwitchListTile(
-            key: const Key('settings_lock_landscape'),
-            value: true,
-            onChanged: (_) {},
-            title: const Text('Lock landscape mode'),
-            subtitle: const Text('Keep the UI optimized for 10-inch tablets.'),
-            activeThumbColor: CtsPalette.orange,
+        children: const [
+          _SettingStatusRow(
+            key: Key('settings_lock_landscape'),
+            icon: Icons.screen_lock_landscape_outlined,
+            title: 'Landscape mode',
+            subtitle: 'Optimized for 10-inch Android tablets.',
+            status: 'Always on',
           ),
-          SwitchListTile(
-            key: const Key('settings_compress_images'),
-            value: true,
-            onChanged: (_) {},
-            title: const Text('Compress images for report output'),
-            subtitle: const Text(
-              'Keeps PDFs readable without unnecessary file size.',
-            ),
-            activeThumbColor: CtsPalette.orange,
+          _SettingStatusRow(
+            key: Key('settings_compress_images'),
+            icon: Icons.photo_size_select_large_outlined,
+            title: 'Report image compression',
+            subtitle: 'Managed photos are saved as local JPEG files.',
+            status: 'Always on',
           ),
-          SwitchListTile(
-            key: const Key('settings_save_recent_recipients'),
-            value: true,
-            onChanged: (_) {},
-            title: const Text('Save recent email recipients'),
-            subtitle: const Text(
-              'Recent addresses stay available for handoff workflows.',
-            ),
-            activeThumbColor: CtsPalette.orange,
+          _SettingStatusRow(
+            key: Key('settings_save_recent_recipients'),
+            icon: Icons.alternate_email_outlined,
+            title: 'Recent recipients',
+            subtitle: 'Recipient history is stored in the local database.',
+            status: 'Always on',
           ),
-          SwitchListTile(
-            key: const Key('settings_branded_theme'),
-            value: true,
-            onChanged: (_) {},
-            title: const Text('Use branded industrial theme'),
-            subtitle: const Text(
-              'Deep navy, slate, and safety orange palette.',
-            ),
-            activeThumbColor: CtsPalette.orange,
+          _SettingStatusRow(
+            key: Key('settings_branded_theme'),
+            icon: Icons.palette_outlined,
+            title: 'CTS theme',
+            subtitle: 'Combined Technical Services branding is fixed for V1.',
+            status: 'Always on',
           ),
         ],
       ),
@@ -111,7 +110,9 @@ class _SettingsPanel extends StatelessWidget {
 }
 
 class _AboutPanel extends StatelessWidget {
-  const _AboutPanel();
+  const _AboutPanel({required this.buildMetadata});
+
+  final AppBuildMetadata buildMetadata;
 
   @override
   Widget build(BuildContext context) {
@@ -121,12 +122,12 @@ class _AboutPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _Note(text: 'App version 1.0.0'),
+          _Note(text: buildMetadata.versionLabel),
           const _Note(
             text: 'Template version ${UndergroundTemplate.templateVersion}',
           ),
           const _Note(text: UndergroundTemplate.templateKey),
-          const _Note(text: 'Build date 2026-07-01'),
+          _Note(text: buildMetadata.buildDateLabel),
           const SizedBox(height: 12),
           Text(
             UndergroundTemplate.reportTitle,
@@ -139,6 +140,86 @@ class _AboutPanel extends StatelessWidget {
           const _Note(text: 'Deep navy shell with safety orange accents.'),
           const _Note(text: 'No login, cloud sync, GPS, or remote logging.'),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingStatusRow extends StatelessWidget {
+  const _SettingStatusRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.status,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: CtsPalette.orange.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: CtsPalette.orange),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(subtitle),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          _StatusPill(text: status),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: CtsPalette.success.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: CtsPalette.success.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: CtsPalette.success,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

@@ -26,6 +26,14 @@ class ValidationResult {
 }
 
 class InspectionValidator {
+  static String templateItemKey(String sectionKey, String itemLabel) {
+    final normalizedItem = itemLabel
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    return '${sectionKey}_$normalizedItem';
+  }
+
   static ValidationResult validateForCompletion(InspectionRecord inspection) {
     final List<ValidationIssue> issues = <ValidationIssue>[];
 
@@ -102,6 +110,24 @@ class InspectionValidator {
     }
     requireHeader(inspection.assetName, 'Asset / equipment name is required.');
     requireHeader(inspection.siteLocation, 'Location / site is required.');
+
+    for (final UndergroundTemplateSection section
+        in UndergroundTemplate.sections) {
+      if (_sectionIsValidatedOutsideResponses(section.key)) {
+        continue;
+      }
+      for (final String itemLabel in section.items) {
+        if (!_hasCompletedTemplateItem(inspection, section, itemLabel)) {
+          issues.add(
+            ValidationIssue(
+              sectionKey: section.key,
+              itemKey: templateItemKey(section.key, itemLabel),
+              message: '${section.title} requires $itemLabel.',
+            ),
+          );
+        }
+      }
+    }
 
     for (final InspectionResponse response in inspection.responses) {
       final String ratingValue = (response.value ?? '').trim().toLowerCase();
@@ -295,10 +321,16 @@ class InspectionValidator {
   }
 
   static InspectionStatus deriveStatus(InspectionRecord inspection) {
-    if (inspection.emailedAt != null) {
+    final ValidationResult result = validateForCompletion(inspection);
+    final bool hasGeneratedPdf = (inspection.generatedPdfPath ?? '')
+        .trim()
+        .isNotEmpty;
+    if (inspection.emailedAt != null &&
+        result.isValid &&
+        inspection.completedAt != null &&
+        hasGeneratedPdf) {
       return InspectionStatus.emailed;
     }
-    final ValidationResult result = validateForCompletion(inspection);
     if (result.isValid && inspection.completedAt != null) {
       return InspectionStatus.complete;
     }
@@ -328,5 +360,36 @@ class InspectionValidator {
               (entry.filterName ?? '').trim().isNotEmpty ||
               (entry.partNumber ?? '').trim().isNotEmpty,
         );
+  }
+
+  static bool _sectionIsValidatedOutsideResponses(String sectionKey) {
+    return sectionKey == 'photographic_evidence' ||
+        sectionKey == 'final_recommendation_signoff';
+  }
+
+  static bool _hasCompletedTemplateItem(
+    InspectionRecord inspection,
+    UndergroundTemplateSection section,
+    String itemLabel,
+  ) {
+    final expectedItemKey = templateItemKey(section.key, itemLabel);
+    for (final InspectionResponse response in inspection.responses) {
+      if (response.sectionKey != section.key) {
+        continue;
+      }
+      final bool matchesItem =
+          response.itemKey == expectedItemKey ||
+          response.itemLabel == itemLabel;
+      if (!matchesItem) {
+        continue;
+      }
+      if ((response.value ?? '').trim().isNotEmpty ||
+          (response.comment ?? '').trim().isNotEmpty ||
+          response.conditionRating != null ||
+          inspection.photosForItem(response.itemKey).isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
   }
 }

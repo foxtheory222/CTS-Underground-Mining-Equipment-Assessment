@@ -21,7 +21,17 @@ class DashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeroBanner(
-            onNewInspection: () => context.go('/inspection/new'),
+            onNewInspection: () async {
+              final inspection = await ref
+                  .read(workspaceProvider)
+                  .createInspection();
+              if (context.mounted) {
+                context.go(
+                  '/inspection/${inspection.id}/edit',
+                  extra: inspection,
+                );
+              }
+            },
             onOpenInspections: () => context.go('/inspections'),
             onOpenActions: () => context.go('/actions'),
           ),

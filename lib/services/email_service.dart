@@ -46,6 +46,7 @@ class EmailHandoffResult {
   const EmailHandoffResult({
     required this.launched,
     required this.recipients,
+    required this.recipientsAreSuggestions,
     required this.subject,
     required this.body,
     required this.attachmentPath,
@@ -53,6 +54,7 @@ class EmailHandoffResult {
 
   final bool launched;
   final List<String> recipients;
+  final bool recipientsAreSuggestions;
   final String subject;
   final String body;
   final String attachmentPath;
@@ -460,10 +462,12 @@ class EmailService {
       }
     }
 
+    final shareBody = _bodyWithRecipientSuggestions(request.body, recipients);
+
     await _shareAdapter.sharePdf(
       pdfFile: request.pdfFile,
       subject: request.subject,
-      body: request.body,
+      body: shareBody,
     );
 
     if (request.rememberRecipient) {
@@ -475,9 +479,19 @@ class EmailService {
     return EmailHandoffResult(
       launched: true,
       recipients: recipients,
+      recipientsAreSuggestions: recipients.isNotEmpty,
       subject: request.subject,
-      body: request.body,
+      body: shareBody,
       attachmentPath: request.pdfFile.path,
     );
+  }
+
+  String _bodyWithRecipientSuggestions(String body, List<String> recipients) {
+    if (recipients.isEmpty) {
+      return body;
+    }
+    return '$body\n\n'
+        'Suggested recipients: ${recipients.join(', ')}\n'
+        'Select or enter these recipients in your email app before sending.';
   }
 }

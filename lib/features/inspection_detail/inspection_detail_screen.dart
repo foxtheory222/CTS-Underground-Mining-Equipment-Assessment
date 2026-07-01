@@ -35,9 +35,16 @@ class InspectionDetailScreen extends ConsumerWidget {
               '/inspection/${inspection.id}/edit',
               extra: inspection,
             ),
-            onDuplicate: () {
-              final duplicate = controller.duplicateInspection(inspection);
-              context.go('/inspection/${duplicate.id}/edit', extra: duplicate);
+            onDuplicate: () async {
+              final duplicate = await controller.duplicateInspection(
+                inspection,
+              );
+              if (context.mounted) {
+                context.go(
+                  '/inspection/${duplicate.id}/edit',
+                  extra: duplicate,
+                );
+              }
             },
           ),
           const SizedBox(height: 18),
