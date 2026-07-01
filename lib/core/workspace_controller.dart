@@ -214,11 +214,11 @@ class AppWorkspaceController extends ChangeNotifier {
     final inspection1 = InspectionSummary(
       id: 'inspection_20260420_0001',
       documentNumber: '20260420-0001',
-      customer: 'Moraine Quarry',
+      customer: 'Moraine Underground',
       workOrderNumber: 'WO-48912',
       customerReference: 'PO-55412',
-      assetName: 'HPU-12 Main Press',
-      siteLocation: 'East Pit Service Bay',
+      assetName: 'Rock Scaler RS-1001',
+      siteLocation: 'East Decline Service Bay',
       technicianName: 'R. Ellis',
       servicingShop: 'CTS Edmonton Service',
       inspectionDateTime: today,
@@ -232,12 +232,12 @@ class AppWorkspaceController extends ChangeNotifier {
       ),
       actionItems: [
         InspectionActionItemView(
-          title: 'Replace return hose at manifold',
+          title: 'Replace damaged boom hose at articulation area',
           description:
-              'Cracking near the fitting on hose H-12 was flagged during the inspection.',
+              'Abrasion near the fitting on boom hose H-12 was flagged during the inspection.',
           conditionRating: ConditionRating.unsatisfactory,
-          sourceSection: 'Hose & Connection Inspection',
-          sourceItem: 'Hose replacement entry',
+          sourceSection: 'Hydraulic System Assessment',
+          sourceItem: 'Hydraulic hose defect entry',
           partsRequired: 'Hose assembly, two JIC fittings, crimp sleeves',
         ),
       ],
@@ -246,14 +246,14 @@ class AppWorkspaceController extends ChangeNotifier {
           assetPath: 'assets/demo/sample_photo_1.jpg',
           caption: 'As-found unit overview',
           sectionTitle: 'Job & Asset Identification',
-          itemLabel: 'HPU wide shot',
+          itemLabel: 'Machine wide shot',
           capturedAt: DateTime(2026, 4, 20, 8, 45),
         ),
         InspectionPhotoView(
           assetPath: 'assets/demo/sample_photo_2.jpg',
-          caption: 'Tank nameplate close-up',
-          sectionTitle: 'Component Tracking',
-          itemLabel: 'Main Pump',
+          caption: 'Machine nameplate close-up',
+          sectionTitle: 'Machine Identification',
+          itemLabel: 'Nameplate',
           capturedAt: DateTime(2026, 4, 20, 9, 10),
         ),
       ],
@@ -265,9 +265,9 @@ class AppWorkspaceController extends ChangeNotifier {
       lastUpdatedAt: today.add(const Duration(minutes: 32)),
       completedAt: today.add(const Duration(hours: 1, minutes: 14)),
       finalTechComments:
-          'Unit operating within service limits after hose replacement planning.',
+          'Machine operating within service limits after hose replacement planning.',
       generatedPdfPath:
-          '/storage/emulated/0/Download/CTS_Fluid_Power_Inspection_Report_20260420-0001.pdf',
+          '/storage/emulated/0/Download/CTS_UMEA_Moraine_Underground_RS-1001_20260420_20260420-0001.pdf',
     );
 
     final inspection2 = InspectionSummary(
@@ -276,8 +276,8 @@ class AppWorkspaceController extends ChangeNotifier {
       customer: 'North Basin Processing',
       workOrderNumber: 'WO-48921',
       customerReference: 'JOB-7745',
-      assetName: 'Transfer Pump Skid 04',
-      siteLocation: 'North Tank Farm',
+      assetName: 'Jumbo Drill JD-04',
+      siteLocation: 'North Ore Zone',
       technicianName: 'K. Morgan',
       servicingShop: 'CTS Calgary Service',
       inspectionDateTime: today.add(const Duration(hours: 2)),
@@ -293,35 +293,35 @@ class AppWorkspaceController extends ChangeNotifier {
         InspectionActionItemView(
           title: 'Lockout/Tagout before restart',
           description:
-              'Critical tank integrity issue requires isolation until corrective work is complete.',
+              'Critical brake system issue requires isolation until corrective work is complete.',
           conditionRating: ConditionRating.criticalOutOfService,
-          sourceSection: 'Fluid & Tank Service',
-          sourceItem: 'Tank integrity',
-          partsRequired: 'Tank repair kit, lockout hardware',
+          sourceSection: 'Braking System',
+          sourceItem: 'Service Brakes',
+          partsRequired: 'Brake valve kit, lockout hardware',
         ),
         InspectionActionItemView(
           title: 'Replace breather element',
           description:
-              'Breather housing contamination noted; element replacement recommended.',
+              'Hydraulic filtration contamination noted; element replacement recommended.',
           conditionRating: ConditionRating.monitorAtRisk,
-          sourceSection: 'Filtration & Breather Service',
-          sourceItem: 'Breather replaced?',
+          sourceSection: 'Hydraulic System Assessment',
+          sourceItem: 'Filtration System',
           partsRequired: 'Breather element 12-7781',
         ),
       ],
       photos: [
         InspectionPhotoView(
           assetPath: 'assets/demo/sample_photo_1.jpg',
-          caption: 'Critical tank corrosion',
-          sectionTitle: 'Fluid & Tank Service',
-          itemLabel: 'Tank integrity',
+          caption: 'Critical service brake test result',
+          sectionTitle: 'Braking System',
+          itemLabel: 'Service Brakes',
           capturedAt: DateTime(2026, 4, 20, 10, 12),
         ),
         InspectionPhotoView(
           assetPath: 'assets/demo/sample_photo_2.jpg',
-          caption: 'Gauges under load',
-          sectionTitle: 'Operational Data / System Test',
-          itemLabel: 'System test',
+          caption: 'Hydraulic pressure test under load',
+          sectionTitle: 'Hydraulic System Assessment',
+          itemLabel: 'Pressure Testing',
           capturedAt: DateTime(2026, 4, 20, 10, 18),
         ),
       ],
@@ -335,17 +335,17 @@ class AppWorkspaceController extends ChangeNotifier {
       emailedAt: today.add(const Duration(hours: 3, minutes: 42)),
       criticalAcknowledged: true,
       generatedPdfPath:
-          '/storage/emulated/0/Download/CTS_Fluid_Power_Inspection_Report_20260420-0002.pdf',
+          '/storage/emulated/0/Download/CTS_UMEA_North_Basin_Processing_JD-04_20260420_20260420-0002.pdf',
     );
 
     final inspection3 = InspectionSummary(
       id: 'inspection_20260419_0001',
       documentNumber: '20260419-0001',
-      customer: 'Prairie Rail Services',
+      customer: 'Prairie Shaft Services',
       workOrderNumber: 'WO-48888',
       customerReference: 'PR-1182',
-      assetName: 'Hydraulic Lift Cart 2',
-      siteLocation: 'Maintenance Yard',
+      assetName: 'Utility Vehicle UV-42',
+      siteLocation: 'Maintenance Drift',
       technicianName: 'T. Singh',
       servicingShop: 'CTS Red Deer Service',
       inspectionDateTime: yesterday,
@@ -363,7 +363,7 @@ class AppWorkspaceController extends ChangeNotifier {
           assetPath: 'assets/demo/sample_photo_1.jpg',
           caption: 'Asset identification photo',
           sectionTitle: 'Job & Asset Identification',
-          itemLabel: 'HPU wide shot',
+          itemLabel: 'Machine wide shot',
           capturedAt: DateTime(2026, 4, 19, 15, 01),
         ),
       ],
@@ -391,7 +391,7 @@ class AppWorkspaceController extends ChangeNotifier {
             inspectionSectionTitles[InspectionSectionKeys
                 .jobAssetIdentification]!,
         completionState: SectionCompletionState.complete,
-        summary: 'Header complete and photos captured.',
+        summary: 'Machine identification complete and photos captured.',
         photoCount: photoCount > 0 ? 2 : 0,
       ),
       InspectionSectionView(
@@ -399,7 +399,7 @@ class AppWorkspaceController extends ChangeNotifier {
         title:
             inspectionSectionTitles[InspectionSectionKeys.componentTracking]!,
         completionState: SectionCompletionState.complete,
-        summary: 'Nameplates and component notes captured.',
+        summary: 'Structural observations and component notes captured.',
         photoCount: photoCount > 1 ? 2 : 0,
       ),
       InspectionSectionView(
@@ -411,10 +411,10 @@ class AppWorkspaceController extends ChangeNotifier {
             ? SectionCompletionState.inProgress
             : SectionCompletionState.complete,
         summary: critical > 0
-            ? 'Critical tank warning acknowledged.'
+            ? 'Critical hydraulic warning acknowledged.'
             : atRisk > 0 || unsat > 0
-            ? 'Flagged fluid service items need follow-up.'
-            : 'Fluid condition is within tolerance.',
+            ? 'Flagged hydraulic system items need follow-up.'
+            : 'Hydraulic system condition is within tolerance.',
         photoCount: photoCount > 2 ? 1 : 0,
         flaggedCount: atRisk + unsat + critical,
         criticalWarning: critical > 0,
@@ -427,7 +427,7 @@ class AppWorkspaceController extends ChangeNotifier {
         completionState: atRisk > 0 || unsat > 0
             ? SectionCompletionState.inProgress
             : SectionCompletionState.complete,
-        summary: 'Hose replacement entries and fitting notes documented.',
+        summary: 'Hose defect entries and fitting notes documented.',
         photoCount: photoCount > 3 ? 1 : 0,
         flaggedCount: atRisk > 0 ? 1 : 0,
       ),
@@ -439,7 +439,7 @@ class AppWorkspaceController extends ChangeNotifier {
         completionState: atRisk > 0
             ? SectionCompletionState.inProgress
             : SectionCompletionState.complete,
-        summary: 'Filter replacement statuses captured.',
+        summary: 'Condition monitoring observations captured.',
         photoCount: photoCount > 4 ? 1 : 0,
       ),
       InspectionSectionView(
@@ -448,7 +448,7 @@ class AppWorkspaceController extends ChangeNotifier {
             inspectionSectionTitles[InspectionSectionKeys
                 .operationalDataSystemTest]!,
         completionState: SectionCompletionState.complete,
-        summary: 'System test readings stored.',
+        summary: 'Remaining life estimates stored.',
         photoCount: photoCount > 5 ? 1 : 0,
       ),
       InspectionSectionView(
@@ -459,7 +459,7 @@ class AppWorkspaceController extends ChangeNotifier {
         completionState: atRisk > 0
             ? SectionCompletionState.inProgress
             : SectionCompletionState.complete,
-        summary: 'Quoted parts and follow-up actions are tracked.',
+        summary: 'Rebuild recommendations and follow-up actions are tracked.',
         photoCount: photoCount > 6 ? 1 : 0,
       ),
       InspectionSectionView(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../core/underground_template.dart';
 import '../../widgets/section_card.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -111,23 +112,28 @@ class _AboutPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      title: 'App Notes',
-      subtitle: 'Implementation choices for the current build.',
+      title: 'About / Version',
+      subtitle: 'Android tablet local-only V1',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const _Note(text: 'App version 1.0.0'),
+          const _Note(
+            text: 'Template version ${UndergroundTemplate.templateVersion}',
+          ),
+          const _Note(text: UndergroundTemplate.templateKey),
+          const _Note(text: 'Build date 2026-07-01'),
+          const SizedBox(height: 12),
           Text(
-            'The current UI is prepared for offline persistence, PDF generation, and email handoff in the next layer.',
+            UndergroundTemplate.reportTitle,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(height: 1.4),
           ),
           const SizedBox(height: 12),
           const _Note(text: 'Public Sans headings with Inter body text.'),
-          const _Note(text: 'Deep navy shell with orange safety accents.'),
-          const _Note(
-            text: 'Left navigation rail and three-panel editor layout.',
-          ),
+          const _Note(text: 'Deep navy shell with safety orange accents.'),
+          const _Note(text: 'No login, cloud sync, GPS, or remote logging.'),
         ],
       ),
     );

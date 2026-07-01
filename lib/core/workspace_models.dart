@@ -224,15 +224,17 @@ const workspaceSearchScopes = <WorkspaceSearchScope>[
 ];
 
 const inspectionSectionTitles = <String, String>{
-  InspectionSectionKeys.jobAssetIdentification: 'Job & Asset Identification',
-  InspectionSectionKeys.componentTracking: 'Component Tracking',
-  InspectionSectionKeys.fluidTankService: 'Fluid & Tank Service',
-  InspectionSectionKeys.hoseConnectionInspection:
-      'Hose & Connection Inspection',
+  InspectionSectionKeys.jobAssetIdentification:
+      'SECTION 1 - MACHINE IDENTIFICATION',
+  InspectionSectionKeys.componentTracking: 'SECTION 2 - STRUCTURAL INSPECTION',
+  InspectionSectionKeys.fluidTankService:
+      'SECTION 5 - HYDRAULIC SYSTEM ASSESSMENT',
+  InspectionSectionKeys.hoseConnectionInspection: 'HYDRAULIC HOSE INSPECTION',
   InspectionSectionKeys.filtrationBreatherService:
-      'Filtration & Breather Service',
+      'SECTION 10 - CONDITION MONITORING RESULTS',
   InspectionSectionKeys.operationalDataSystemTest:
-      'Operational Data / System Test',
-  InspectionSectionKeys.followUpRepairsQuoting: 'Follow-Up Repairs & Quoting',
-  InspectionSectionKeys.reviewCompletion: 'Review & Completion',
+      'SECTION 11 - LIFE EXTENSION ASSESSMENT',
+  InspectionSectionKeys.followUpRepairsQuoting:
+      'SECTION 12 - REBUILD RECOMMENDATIONS',
+  InspectionSectionKeys.reviewCompletion: 'FINAL CTS RECOMMENDATION & SIGNOFF',
 };
