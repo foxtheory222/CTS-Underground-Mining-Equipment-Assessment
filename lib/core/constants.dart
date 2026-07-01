@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'CTS Underground Mining Equipment Assessment';
-  static const String reportTitle = 'CTS Underground Mining Equipment Assessment Report';
+  static const String reportTitle =
+      'CTS Underground Mining Equipment Assessment Report';
   static const String placeholderLogoAsset = 'assets/logo/cts_logo.png';
   static const String samplePhotoAssetOne = 'assets/demo/sample_photo_1.jpg';
   static const String samplePhotoAssetTwo = 'assets/demo/sample_photo_2.jpg';

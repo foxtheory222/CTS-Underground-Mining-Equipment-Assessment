@@ -15,7 +15,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CTS Underground Mining Equipment Assessment'), findsWidgets);
+    expect(
+      find.text('CTS Underground Mining Equipment Assessment'),
+      findsWidgets,
+    );
     expect(find.text('Inspection Suite'), findsOneWidget);
     expect(find.text('Critical Reports'), findsOneWidget);
   });

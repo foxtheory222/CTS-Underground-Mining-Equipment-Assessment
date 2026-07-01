@@ -27,7 +27,8 @@ class PdfService {
       title: reportTitle,
       author: 'Combined Technical Services',
       subject: reportTitle,
-      keywords: 'Combined Technical Services, inspection, report, hydraulics, underground mining equipment',
+      keywords:
+          'Combined Technical Services, inspection, report, hydraulics, underground mining equipment',
       compress: compress,
       theme: pw.ThemeData.withFont(),
     );
