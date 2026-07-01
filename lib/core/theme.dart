@@ -171,7 +171,7 @@ ThemeData buildCtsTheme(Brightness brightness) {
       ),
     ),
     navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: dark ? CtsPalette.navyAlt : Colors.white,
+      backgroundColor: Colors.transparent,
       indicatorColor: CtsPalette.orange.withValues(alpha: 0.16),
       selectedIconTheme: const IconThemeData(color: CtsPalette.orange),
       unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
@@ -185,6 +185,29 @@ ThemeData buildCtsTheme(Brightness brightness) {
         fontWeight: FontWeight.w600,
         color: scheme.onSurfaceVariant,
       ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: dark ? CtsPalette.navyAlt : Colors.white,
+      indicatorColor: CtsPalette.orange.withValues(alpha: 0.18),
+      height: 66,
+      elevation: 0,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(
+          size: 24,
+          color: selected ? CtsPalette.orange : scheme.onSurfaceVariant,
+        );
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: selected ? CtsPalette.orange : scheme.onSurfaceVariant,
+        );
+      }),
     ),
     dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1),
     chipTheme: ChipThemeData(

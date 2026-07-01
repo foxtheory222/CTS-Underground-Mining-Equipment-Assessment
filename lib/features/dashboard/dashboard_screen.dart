@@ -111,100 +111,96 @@ class _HeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(26),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [CtsPalette.navyAlt, CtsPalette.navy, Color(0xFF132944)],
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: CtsPalette.orange.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.space_dashboard_rounded,
+                color: CtsPalette.orange,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Dashboard',
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        const SizedBox(height: 12),
+        Text(
+          'Fast access to draft, in-progress, complete, and emailed '
+          'inspections for underground mining equipment.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+
+    final actions = Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        FilledButton.icon(
+          onPressed: onNewInspection,
+          icon: const Icon(Icons.add),
+          label: const Text('New Inspection'),
+        ),
+        OutlinedButton.icon(
+          onPressed: onOpenInspections,
+          icon: const Icon(Icons.search),
+          label: const Text('Browse Inspections'),
+        ),
+        OutlinedButton.icon(
+          onPressed: onOpenActions,
+          icon: const Icon(Icons.assignment_turned_in_outlined),
+          label: const Text('Action Items'),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 720) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  'Dashboard',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Fast access to draft, in-progress, complete, and emailed inspections from a clean tablet layout built for field work.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: onNewInspection,
-                      icon: const Icon(Icons.add),
-                      label: const Text('New Inspection'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: onOpenInspections,
-                      icon: const Icon(Icons.search),
-                      label: const Text('Browse Inspections'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: onOpenActions,
-                      icon: const Icon(Icons.assignment_turned_in_outlined),
-                      label: const Text('Action Items'),
-                    ),
-                  ],
-                ),
+                Expanded(child: heading),
+                const SizedBox(width: 24),
+                Flexible(child: actions),
               ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          Container(
-            width: 280,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current focus',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const StatusBadge(
-                  label: 'Critical reports require LOTO acknowledgement',
-                  color: CtsPalette.danger,
-                  icon: Icons.warning_amber_rounded,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'All records stay on-device. PDF export, share, and email handoff are available without an online workflow.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [heading, const SizedBox(height: 20), actions],
+          );
+        },
       ),
     );
   }

@@ -87,92 +87,98 @@ class _DetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          colors: [CtsPalette.navyAlt, CtsPalette.navy, Color(0xFF152947)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final info = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            StatusBadge.forInspection(inspection.status),
+            StatusBadge(
+              label: inspection.documentNumber,
+              color: CtsPalette.orange,
+              icon: Icons.confirmation_number_outlined,
+            ),
+          ],
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        const SizedBox(height: 14),
+        Text(
+          inspection.customer,
+          style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${inspection.assetName} · ${inspection.workOrderNumber}',
+          style: textTheme.titleSmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _HeaderInfo(label: 'Technician', value: inspection.technicianName),
+            _HeaderInfo(label: 'Site', value: inspection.siteLocation),
+            _HeaderInfo(
+              label: 'Servicing Shop',
+              value: inspection.servicingShop,
+            ),
+            _HeaderInfo(
+              label: 'Updated',
+              value: DateFormat(
+                'MMM d, h:mm a',
+              ).format(inspection.lastUpdatedAt),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final actions = Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        FilledButton.icon(
+          onPressed: onEdit,
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Edit'),
+        ),
+        OutlinedButton.icon(
+          onPressed: onDuplicate,
+          icon: const Icon(Icons.copy_outlined),
+          label: const Text('Duplicate'),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 680) {
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    StatusBadge.forInspection(inspection.status),
-                    StatusBadge(
-                      label: inspection.documentNumber,
-                      color: CtsPalette.orangeSoft,
-                      icon: Icons.confirmation_number_outlined,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  inspection.customer,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${inspection.assetName} · ${inspection.workOrderNumber}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.78),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _HeaderInfo(
-                      label: 'Technician',
-                      value: inspection.technicianName,
-                    ),
-                    _HeaderInfo(label: 'Site', value: inspection.siteLocation),
-                    _HeaderInfo(
-                      label: 'Servicing Shop',
-                      value: inspection.servicingShop,
-                    ),
-                    _HeaderInfo(
-                      label: 'Updated',
-                      value: DateFormat(
-                        'MMM d, h:mm a',
-                      ).format(inspection.lastUpdatedAt),
-                    ),
-                  ],
-                ),
+                Expanded(child: info),
+                const SizedBox(width: 18),
+                actions,
               ],
-            ),
-          ),
-          const SizedBox(width: 18),
-          Column(
-            children: [
-              FilledButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: onDuplicate,
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Duplicate'),
-              ),
-            ],
-          ),
-        ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [info, const SizedBox(height: 18), actions],
+          );
+        },
       ),
     );
   }
@@ -186,11 +192,14 @@ class _HeaderInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
+      constraints: const BoxConstraints(maxWidth: 260),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,15 +209,14 @@ class _HeaderInfo extends StatelessWidget {
             label,
             style: Theme.of(
               context,
-            ).textTheme.labelSmall?.copyWith(color: Colors.white70),
+            ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

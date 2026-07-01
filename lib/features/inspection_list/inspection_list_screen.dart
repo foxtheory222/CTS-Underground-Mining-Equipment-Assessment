@@ -235,18 +235,18 @@ class _InspectionTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
                 children: [
                   _StatDot(
                     color: CtsPalette.orange,
                     label: '${inspection.flaggedCount} flagged',
                   ),
-                  const SizedBox(width: 12),
                   _StatDot(
                     color: CtsPalette.success,
                     label: '${inspection.photoCount} photos',
                   ),
-                  const SizedBox(width: 12),
                   _StatDot(
                     color: CtsPalette.info,
                     label: '${inspection.actionItems.length} actions',

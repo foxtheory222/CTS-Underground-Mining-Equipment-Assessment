@@ -64,10 +64,12 @@ class SignaturePad extends StatelessWidget {
               label: const Text('Clear signature'),
             ),
             const SizedBox(width: 12),
-            Text(
-              'Draw the signature with a stylus or finger.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            Expanded(
+              child: Text(
+                'Draw the signature with a stylus or finger.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

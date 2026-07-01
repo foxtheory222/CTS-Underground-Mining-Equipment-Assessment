@@ -137,7 +137,11 @@ class _AboutPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _Note(text: 'Public Sans headings with Inter body text.'),
-          const _Note(text: 'Deep navy shell with safety orange accents.'),
+          const _Note(
+            text:
+                'Navy branded header with light, high-contrast field '
+                'screens and safety orange accents.',
+          ),
           const _Note(text: 'No login, cloud sync, GPS, or remote logging.'),
         ],
       ),
