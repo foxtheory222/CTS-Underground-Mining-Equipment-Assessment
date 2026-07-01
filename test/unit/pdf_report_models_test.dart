@@ -10,7 +10,7 @@ void main() {
       customer: 'Acme Manufacturing',
       workOrderNumber: 'WO-48158',
       customerReference: 'PO-1194',
-      assetName: 'HPU-13',
+      assetName: 'Rock Scaler RS-1013',
       siteLocation: 'Main Plant',
       technicianName: 'Jordan Lee',
       servicingShop: 'CTS North Shop',
@@ -79,9 +79,9 @@ void main() {
   });
 
   test('condition rating labels stay customer-facing and readable', () {
-    expect(ReportConditionRating.satisfactory.label, 'Satisfactory');
-    expect(ReportConditionRating.monitor.label, 'Monitor / At Risk');
-    expect(ReportConditionRating.unsatisfactory.label, 'Unsatisfactory');
+    expect(ReportConditionRating.satisfactory.label, 'Good');
+    expect(ReportConditionRating.monitor.label, 'Fair');
+    expect(ReportConditionRating.unsatisfactory.label, 'Poor');
     expect(ReportConditionRating.critical.label, 'Critical / Out of Service');
     expect(ReportConditionRating.monitor.isFlagged, isTrue);
     expect(ReportConditionRating.satisfactory.isFlagged, isFalse);

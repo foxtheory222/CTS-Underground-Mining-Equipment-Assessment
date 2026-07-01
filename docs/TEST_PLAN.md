@@ -52,8 +52,8 @@ Use a fix-test-fix loop:
 
 ### Regression Tests
 - Clean pass inspection.
-- Inspection with At Risk items.
-- Inspection with Unsatisfactory items.
+- Inspection with Fair items.
+- Inspection with Poor items.
 - Inspection with Critical / Out of Service items.
 - Inspection with many photos.
 - Inspection with hose replacement entries.
@@ -67,7 +67,7 @@ Use a fix-test-fix loop:
 4. Fill the required header fields.
 5. Complete each fixed section.
 6. Add a photo.
-7. Trigger an At Risk validation path.
+7. Trigger a Fair validation path.
 8. Trigger a Critical validation path and acknowledge lockout/tagout.
 9. Add a structured hose replacement entry.
 10. Capture the operational and follow-up information.

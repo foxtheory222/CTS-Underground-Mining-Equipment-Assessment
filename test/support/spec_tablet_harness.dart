@@ -26,7 +26,7 @@ class _SpecTabletHarnessAppState extends State<SpecTabletHarnessApp> {
   final TextEditingController customerReferenceController =
       TextEditingController(text: 'PO-1194');
   final TextEditingController assetController = TextEditingController(
-    text: 'HPU-13',
+    text: 'Rock Scaler RS-1013',
   );
   final TextEditingController locationController = TextEditingController(
     text: 'Main Plant',
@@ -532,7 +532,7 @@ class _SpecTabletHarnessAppState extends State<SpecTabletHarnessApp> {
               );
             });
           },
-          child: const Text('Mark At Risk'),
+          child: const Text('Mark Fair'),
         ),
         ElevatedButton(
           key: const Key('critical_button'),

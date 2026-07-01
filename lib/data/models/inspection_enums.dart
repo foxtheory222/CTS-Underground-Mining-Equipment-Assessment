@@ -150,11 +150,11 @@ extension ConditionRatingX on ConditionRating {
   String get label {
     switch (this) {
       case ConditionRating.satisfactory:
-        return 'Satisfactory';
+        return 'Good';
       case ConditionRating.monitorAtRisk:
-        return 'Monitor / At Risk';
+        return 'Fair';
       case ConditionRating.unsatisfactory:
-        return 'Unsatisfactory (Fail)';
+        return 'Poor';
       case ConditionRating.criticalOutOfService:
         return 'Critical / Out of Service';
     }

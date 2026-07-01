@@ -45,19 +45,19 @@ class StatusBadge extends StatelessWidget {
     switch (rating) {
       case ConditionRating.satisfactory:
         return const StatusBadge(
-          label: 'Satisfactory',
+          label: 'Good',
           color: CtsPalette.success,
           icon: Icons.check_circle_outline,
         );
       case ConditionRating.monitorAtRisk:
         return const StatusBadge(
-          label: 'At Risk',
+          label: 'Fair',
           color: CtsPalette.warning,
           icon: Icons.visibility_outlined,
         );
       case ConditionRating.unsatisfactory:
         return const StatusBadge(
-          label: 'Unsatisfactory',
+          label: 'Poor',
           color: CtsPalette.orange,
           icon: Icons.error_outline,
         );

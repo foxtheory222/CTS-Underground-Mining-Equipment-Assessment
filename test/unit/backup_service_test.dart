@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
+import 'package:cts_underground_mining_assessment/core/underground_template.dart';
 import 'package:cts_underground_mining_assessment/services/backup_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -41,6 +44,17 @@ void main() {
 
     expect(await exportResult.archiveFile.exists(), isTrue);
     expect(await exportResult.archiveFile.length(), greaterThan(0));
+    expect(
+      p.basename(exportResult.archiveFile.path),
+      'CTS_InspectionBundle_20260420-0001_UMEA.zip',
+    );
+    final manifest = await _readArchiveJson(
+      exportResult.archiveFile,
+      'manifest.json',
+    );
+    expect(manifest['templateKey'], UndergroundTemplate.templateKey);
+    expect(manifest['templateVersion'], UndergroundTemplate.templateVersion);
+    expect(manifest['appName'], UndergroundTemplate.appName);
 
     final importResult = await service.importInspection(
       archiveFile: exportResult.archiveFile,
@@ -51,6 +65,22 @@ void main() {
     expect(
       importResult.inspectionJson['documentNumber'],
       isNot('20260420-0001'),
+    );
+    expect(
+      importResult.inspectionJson['templateKey'],
+      UndergroundTemplate.templateKey,
+    );
+    expect(
+      importResult.inspectionJson['templateVersion'],
+      UndergroundTemplate.templateVersion,
+    );
+    expect(
+      importResult.inspectionJson['originalDocumentNumber'],
+      '20260420-0001',
+    );
+    expect(
+      importResult.inspectionJson['restoredFromExportPath'],
+      exportResult.archiveFile.path,
     );
     expect(importResult.restoredPhotoFiles, isNotEmpty);
     expect(importResult.restoredPdfFile, isNotNull);
@@ -117,4 +147,14 @@ Future<File> _writePdf(Directory directory, String fileName) async {
     Uint8List.fromList(List<int>.generate(72, (index) => (index * 3) % 255)),
   );
   return file;
+}
+
+Future<Map<String, dynamic>> _readArchiveJson(
+  File archiveFile,
+  String name,
+) async {
+  final archive = ZipDecoder().decodeBytes(await archiveFile.readAsBytes());
+  final entry = archive.files.singleWhere((file) => file.name == name);
+  return jsonDecode(utf8.decode(entry.content as List<int>))
+      as Map<String, dynamic>;
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cts_underground_mining_assessment/core/underground_template.dart';
 import 'package:cts_underground_mining_assessment/features/pdf_report/pdf_report_models.dart';
 import 'package:cts_underground_mining_assessment/services/pdf_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,11 +25,11 @@ void main() {
   }) {
     return InspectionReportData(
       documentNumber: '20260418-0001',
-      customer: 'North/West Hydraulics: Plant #1',
+      customer: 'Moraine Underground',
       workOrderNumber: 'WO-7788',
       customerReference: 'PO-4421',
-      assetName: 'HPU-42 Main System',
-      siteLocation: 'Edmonton Service Bay 3',
+      assetName: 'Rock Scaler RS-1001',
+      siteLocation: 'East Decline Service Bay',
       technicianName: 'Alex Technician',
       servicingShop: 'CTS Edmonton',
       inspectionDateTime: DateTime(2026, 4, 18, 9, 30),
@@ -37,7 +38,7 @@ void main() {
       emailedAt: DateTime(2026, 4, 18, 12, 15),
       status: InspectionReportStatus.emailed,
       finalTechComments:
-          'Unit inspected offline. Tank cleaning and hose replacement recommended on next visit.',
+          'Machine inspected offline. Hydraulic hose replacement recommended on next shutdown.',
       criticalAcknowledged: true,
       signature: InspectionReportSignature(
         bytes: signatureBytes,
@@ -46,20 +47,20 @@ void main() {
       ),
       sections: [
         InspectionReportSection(
-          key: 'job_asset_identification',
-          title: 'Job & Asset Identification',
+          key: 'machine_identification',
+          title: 'SECTION 1 - MACHINE IDENTIFICATION',
           subtitle: 'Inspection header and as-found photos.',
           items: [
             InspectionReportItem(
-              label: 'Customer / Site Name',
-              value: 'North/West Hydraulics',
+              label: 'Customer',
+              value: 'Moraine Underground',
               helperText: 'Mandatory header field.',
               photos: [
                 InspectionReportPhoto(
                   bytes: photoOne,
-                  caption: 'Unit wide shot',
-                  sectionTitle: 'Job & Asset Identification',
-                  itemLabel: 'Customer / Site Name',
+                  caption: 'Machine wide shot',
+                  sectionTitle: 'SECTION 1 - MACHINE IDENTIFICATION',
+                  itemLabel: 'Customer',
                   capturedAt: DateTime(2026, 4, 18, 9, 15),
                 ),
               ],
@@ -67,22 +68,22 @@ void main() {
           ],
         ),
         InspectionReportSection(
-          key: 'fluid_tank_service',
-          title: 'Fluid & Tank Service',
+          key: 'hydraulic_system_assessment',
+          title: 'SECTION 5 - HYDRAULIC SYSTEM ASSESSMENT',
           items: [
             InspectionReportItem(
-              label: 'Tank Integrity',
-              value: 'Minor rust and paint wear',
+              label: 'Hose Condition',
+              value: 'Minor abrasion and cover wear',
               conditionRating: ReportConditionRating.monitor,
               comment:
-                  'Monitor corrosion around lower seam. Keep under review.',
+                  'Monitor abrasion around boom hose bundle. Keep under review.',
               helperText: 'Flagged items require a comment and a photo.',
               photos: [
                 InspectionReportPhoto(
                   bytes: photoTwo,
-                  caption: 'Tank seam rust',
-                  sectionTitle: 'Fluid & Tank Service',
-                  itemLabel: 'Tank Integrity',
+                  caption: 'Boom hose abrasion',
+                  sectionTitle: 'SECTION 5 - HYDRAULIC SYSTEM ASSESSMENT',
+                  itemLabel: 'Hose Condition',
                   capturedAt: DateTime(2026, 4, 18, 10, 5),
                 ),
                 InspectionReportPhoto(
@@ -95,16 +96,17 @@ void main() {
               ],
             ),
             InspectionReportItem(
-              label: 'Fluid Clarity',
-              value: 'Milky / contaminated',
+              label: 'ISO Cleanliness',
+              value: 'Contamination trend elevated',
               conditionRating: ReportConditionRating.unsatisfactory,
-              comment: 'Sample indicates contamination. Plan fluid change.',
+              comment:
+                  'Sample indicates contamination. Plan filtration service.',
               photos: [
                 InspectionReportPhoto(
                   bytes: photoTwo,
-                  caption: 'Fluid sample',
-                  sectionTitle: 'Fluid & Tank Service',
-                  itemLabel: 'Fluid Clarity',
+                  caption: 'Oil sample',
+                  sectionTitle: 'SECTION 5 - HYDRAULIC SYSTEM ASSESSMENT',
+                  itemLabel: 'ISO Cleanliness',
                   capturedAt: DateTime(2026, 4, 18, 10, 20),
                 ),
               ],
@@ -112,24 +114,24 @@ void main() {
           ],
         ),
         InspectionReportSection(
-          key: 'hose_connection_inspection',
-          title: 'Hose & Connection Inspection',
+          key: 'braking_system',
+          title: 'SECTION 7 - BRAKING SYSTEM',
           items: [
             InspectionReportItem(
-              label: 'Overall Hose Condition',
-              value: 'Critical wear noted on return line',
+              label: 'Service Brakes',
+              value: 'Critical stopping performance issue',
               conditionRating: ReportConditionRating.critical,
               comment:
-                  'LOTO required. Replace return line assembly before start-up.',
+                  'LOTO required. Repair service brake system before start-up.',
               helperText:
-                  'Identify the hose, failure type, and parts needed to build the replacement.',
-              tags: const ['Return line', 'LOTO'],
+                  'Poor service brake results require critical handling.',
+              tags: const ['Service Brakes', 'LOTO'],
               photos: [
                 InspectionReportPhoto(
                   bytes: photoOne,
-                  caption: 'Return line abrasion',
-                  sectionTitle: 'Hose & Connection Inspection',
-                  itemLabel: 'Overall Hose Condition',
+                  caption: 'Brake test result',
+                  sectionTitle: 'SECTION 7 - BRAKING SYSTEM',
+                  itemLabel: 'Service Brakes',
                   capturedAt: DateTime(2026, 4, 18, 10, 45),
                 ),
               ],
@@ -139,18 +141,16 @@ void main() {
       ],
       actionItems: [
         const InspectionReportActionItem(
-          title: 'Replace contaminated fluid and filter set',
-          description:
-              'Schedule service for fluid change, filter replacement, and flush.',
-          partsRequired: 'Hydraulic fluid, return filter, breather',
+          title: 'Replace contaminated hydraulic filter set',
+          description: 'Schedule service for filtration replacement and flush.',
+          partsRequired: 'Hydraulic oil, return filter, breather',
           isAutoGenerated: true,
           conditionRating: ReportConditionRating.unsatisfactory,
         ),
         const InspectionReportActionItem(
-          title: 'Replace return hose assembly',
-          description:
-              'Build new return hose with proper fittings and route to minimize abrasion.',
-          partsRequired: 'Hose, ends, clamps, sleeve',
+          title: 'Repair service brake system',
+          description: 'Complete brake diagnostic and repair before restart.',
+          partsRequired: 'Brake valve kit, test tooling',
           isAutoGenerated: true,
           conditionRating: ReportConditionRating.critical,
         ),
@@ -159,16 +159,19 @@ void main() {
     );
   }
 
-  test('buildReportFileName sanitizes customer and work order', () {
-    final data = buildReport();
+  test(
+    'buildReportFileName follows UMEA customer machine date document format',
+    () {
+      final data = buildReport();
 
-    final fileName = PdfService.buildReportFileName(data);
+      final fileName = PdfService.buildReportFileName(data);
 
-    expect(
-      fileName,
-      'CTS_Fluid_Power_Inspection_Report_20260418-0001_North West Hydraulics Plant #1_WO-7788.pdf',
-    );
-  });
+      expect(
+        fileName,
+        'CTS_UMEA_Moraine_Underground_Rock_Scaler_RS-1001_20260418_20260418-0001.pdf',
+      );
+    },
+  );
 
   test(
     'generateInspectionReportBytes renders report content and critical warning text',
@@ -181,10 +184,17 @@ void main() {
 
       expect(bytes, isNotEmpty);
       expect(pdfText, contains(PdfService.reportTitle));
+      expect(pdfText, contains(UndergroundTemplate.reportTitle));
+      expect(pdfText, contains('Template'));
+      expect(pdfText, contains('version'));
+      expect(pdfText, contains('1.0.0'));
+      expect(pdfText, contains('USD'));
       expect(pdfText, contains('Lockout/Tagout'));
       expect(pdfText, contains('WO-7788'));
       expect(pdfText, contains('PO-4421'));
-      expect(pdfText, contains('HPU-42'));
+      expect(pdfText, contains('Rock'));
+      expect(pdfText, contains('Scaler'));
+      expect(pdfText, contains('RS-1001'));
       expect(pdfText, contains('Private'));
       expect(pdfText, contains('confidential'));
       expect(pdfText, contains('Alex'));
@@ -228,7 +238,7 @@ void main() {
     expect(await file.length(), greaterThan(1000));
     expect(
       file.path,
-      contains('CTS_Fluid_Power_Inspection_Report_20260418-0001_'),
+      contains('CTS_UMEA_Moraine_Underground_Rock_Scaler_RS-1001_20260418_'),
     );
   });
 }

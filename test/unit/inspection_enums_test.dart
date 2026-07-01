@@ -18,9 +18,9 @@ void main() {
   });
 
   test('condition ratings expose the expected labels and flag behavior', () {
-    expect(ConditionRating.satisfactory.label, 'Satisfactory');
-    expect(ConditionRating.monitorAtRisk.label, 'Monitor / At Risk');
-    expect(ConditionRating.unsatisfactory.label, 'Unsatisfactory (Fail)');
+    expect(ConditionRating.satisfactory.label, 'Good');
+    expect(ConditionRating.monitorAtRisk.label, 'Fair');
+    expect(ConditionRating.unsatisfactory.label, 'Poor');
     expect(
       ConditionRating.criticalOutOfService.label,
       'Critical / Out of Service',

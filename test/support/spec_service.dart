@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:cts_underground_mining_assessment/core/constants.dart';
+import 'package:cts_underground_mining_assessment/core/underground_template.dart';
 import 'package:cts_underground_mining_assessment/data/models/inspection_enums.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
@@ -592,7 +593,7 @@ class SpecInspectionService {
     final output = File(
       p.join(
         exportDirectory.path,
-        '${inspection.documentNumber}.ctsinspection.zip',
+        '${UndergroundTemplate.exportFilePrefix}_${inspection.documentNumber}_${UndergroundTemplate.exportFileSuffix}.zip',
       ),
     );
     final encoded = ZipEncoder().encode(archive);

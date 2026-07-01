@@ -20,29 +20,26 @@ void main() {
     },
   );
 
-  test(
-    'at risk, unsatisfactory, and critical fixtures carry the expected counts',
-    () async {
-      final service = await createService();
-      final atRisk = toReportData(await seedAtRisk(service));
-      final unsatisfactory = toReportData(await seedUnsatisfactory(service));
-      final critical = toReportData(await seedCritical(service));
+  test('fair, poor, and critical fixtures carry the expected counts', () async {
+    final service = await createService();
+    final atRisk = toReportData(await seedAtRisk(service));
+    final poor = toReportData(await seedPoor(service));
+    final critical = toReportData(await seedCritical(service));
 
-      expect(atRisk.flaggedItemCount, 1);
-      expect(atRisk.atRiskCount, 1);
-      expect(atRisk.unsatisfactoryCount, 0);
-      expect(atRisk.criticalCount, 0);
+    expect(atRisk.flaggedItemCount, 1);
+    expect(atRisk.atRiskCount, 1);
+    expect(atRisk.unsatisfactoryCount, 0);
+    expect(atRisk.criticalCount, 0);
 
-      expect(unsatisfactory.flaggedItemCount, 1);
-      expect(unsatisfactory.unsatisfactoryCount, 1);
-      expect(unsatisfactory.actionItems, hasLength(2));
+    expect(poor.flaggedItemCount, 1);
+    expect(poor.unsatisfactoryCount, 1);
+    expect(poor.actionItems, hasLength(2));
 
-      expect(critical.flaggedItemCount, 1);
-      expect(critical.criticalCount, 1);
-      expect(critical.criticalAcknowledged, isTrue);
-      expect(critical.actionItems, hasLength(2));
-    },
-  );
+    expect(critical.flaggedItemCount, 1);
+    expect(critical.criticalCount, 1);
+    expect(critical.criticalAcknowledged, isTrue);
+    expect(critical.actionItems, hasLength(2));
+  });
 
   test(
     'many photos and hose replacement fixtures preserve media and action detail',
@@ -53,7 +50,7 @@ void main() {
 
       expect(manyPhotos.allPhotos.length, 10);
       expect(manyPhotos.allPhotos, hasLength(10));
-      expect(manyPhotos.sections.first.items.first.label, 'HPU Wide Shot');
+      expect(manyPhotos.sections.first.items.first.label, 'Machine Wide Shot');
 
       expect(hoseReplacement.hoseEntries, hasLength(1));
       expect(hoseReplacement.actionItems, hasLength(1));

@@ -35,6 +35,7 @@ class SignaturePad extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Container(
+          key: const Key('signature_pad_area'),
           height: 180,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -46,6 +47,7 @@ class SignaturePad extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Signature(
+              key: const Key('signature_input_area'),
               controller: controller,
               backgroundColor: Theme.of(
                 context,

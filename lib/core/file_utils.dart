@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'constants.dart';
+import 'underground_template.dart';
 
 class FileUtils {
   static Future<Directory> appRootDirectory() async {
@@ -117,17 +118,31 @@ class FileUtils {
       RegExp(r'[^A-Za-z0-9._-]+'),
       '_',
     );
-    return sanitized.replaceAll(RegExp(r'_+'), '_');
+    final String compacted = sanitized
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    return compacted.isEmpty ? 'unknown' : compacted;
   }
 
   static String buildPdfFileName({
     required String documentNumber,
     required String customer,
-    required String workOrderNumber,
+    required String machineOrSerial,
+    required DateTime inspectionDate,
   }) {
     final String safeCustomer = sanitizeFileSegment(customer);
-    final String safeWorkOrder = sanitizeFileSegment(workOrderNumber);
-    return 'CTS_Fluid_Power_Inspection_Report_${sanitizeFileSegment(documentNumber)}_'
-        '${safeCustomer}_$safeWorkOrder.pdf';
+    final String safeMachineOrSerial = sanitizeFileSegment(machineOrSerial);
+    final String safeDocumentNumber = sanitizeFileSegment(documentNumber);
+    return '${UndergroundTemplate.reportFilePrefix}_${safeCustomer}_'
+        '${safeMachineOrSerial}_${_formatFileDate(inspectionDate)}_'
+        '$safeDocumentNumber.pdf';
+  }
+
+  static String _formatFileDate(DateTime value) {
+    final local = value.toLocal();
+    final year = local.year.toString().padLeft(4, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '$year$month$day';
   }
 }

@@ -231,12 +231,12 @@ class _DetailSections extends StatelessWidget {
                 color: CtsPalette.orange,
               ),
               _SummaryCard(
-                label: 'At Risk',
+                label: 'Fair',
                 value: inspection.atRiskCount.toString(),
                 color: CtsPalette.warning,
               ),
               _SummaryCard(
-                label: 'Unsatisfactory',
+                label: 'Poor',
                 value: inspection.unsatisfactoryCount.toString(),
                 color: CtsPalette.orangeSoft,
               ),

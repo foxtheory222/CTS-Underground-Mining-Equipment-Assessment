@@ -526,7 +526,6 @@ class InspectionRecord {
     this.workOrderNumber = '',
     this.customerReference = '',
     this.assetName = '',
-    this.hpuAssetIdName = '',
     this.templateKey = UndergroundTemplate.templateKey,
     this.templateVersion = UndergroundTemplate.templateVersion,
     this.appName = UndergroundTemplate.appName,
@@ -573,7 +572,6 @@ class InspectionRecord {
   String workOrderNumber;
   String customerReference;
   String assetName;
-  String hpuAssetIdName;
   String templateKey;
   String templateVersion;
   String appName;
@@ -621,7 +619,6 @@ class InspectionRecord {
       workOrderNumber: json['workOrderNumber'] as String? ?? '',
       customerReference: json['customerReference'] as String? ?? '',
       assetName: json['assetName'] as String? ?? '',
-      hpuAssetIdName: json['hpuAssetIdName'] as String? ?? '',
       templateKey:
           json['templateKey'] as String? ?? UndergroundTemplate.templateKey,
       templateVersion:
@@ -634,7 +631,10 @@ class InspectionRecord {
       manufacturer: json['manufacturer'] as String? ?? '',
       model: json['model'] as String? ?? '',
       serialNumber: json['serialNumber'] as String? ?? '',
-      alternateAssetId: json['alternateAssetId'] as String? ?? '',
+      alternateAssetId:
+          json['alternateAssetId'] as String? ??
+          json['hpuAssetIdName'] as String? ??
+          '',
       machineHours: json['machineHours'] as String? ?? '',
       selectedPurposes:
           (json['selectedPurposes'] as List<dynamic>? ?? <dynamic>[])
@@ -713,7 +713,6 @@ class InspectionRecord {
       'workOrderNumber': workOrderNumber,
       'customerReference': customerReference,
       'assetName': assetName,
-      'hpuAssetIdName': hpuAssetIdName,
       'templateKey': templateKey,
       'templateVersion': templateVersion,
       'appName': appName,

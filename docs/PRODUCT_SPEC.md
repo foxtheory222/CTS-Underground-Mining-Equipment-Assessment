@@ -52,7 +52,7 @@ CTS Underground Mining Equipment Assessment is a production-ready Android tablet
 ## Core Rules
 - Editing an emailed inspection clears emailed status and timestamp until it is sent again.
 - Critical / Out of Service items require comment, photo, action item, and lockout/tagout acknowledgement.
-- Flagged items include Monitor / At Risk, Unsatisfactory, and Critical / Out of Service.
+- Flagged items include Fair, Poor, and Critical / Out of Service.
 - The app must never require internet access to work.
 - Duplicate inspections must receive a new document number and new created timestamp.
 

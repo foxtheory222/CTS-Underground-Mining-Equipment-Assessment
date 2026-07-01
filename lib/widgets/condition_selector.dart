@@ -21,17 +21,17 @@ class ConditionSelector extends StatelessWidget {
       segments: const [
         ButtonSegment(
           value: ConditionRating.satisfactory,
-          label: Text('Satisfactory'),
+          label: Text('Good'),
           icon: Icon(Icons.check_circle_outline),
         ),
         ButtonSegment(
           value: ConditionRating.monitorAtRisk,
-          label: Text('At Risk'),
+          label: Text('Fair'),
           icon: Icon(Icons.visibility_outlined),
         ),
         ButtonSegment(
           value: ConditionRating.unsatisfactory,
-          label: Text('Unsatisfactory'),
+          label: Text('Poor'),
           icon: Icon(Icons.error_outline),
         ),
         ButtonSegment(

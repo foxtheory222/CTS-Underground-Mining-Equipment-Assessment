@@ -67,6 +67,7 @@ class _SettingsPanel extends StatelessWidget {
       child: Column(
         children: [
           SwitchListTile(
+            key: const Key('settings_lock_landscape'),
             value: true,
             onChanged: (_) {},
             title: const Text('Lock landscape mode'),
@@ -74,6 +75,7 @@ class _SettingsPanel extends StatelessWidget {
             activeThumbColor: CtsPalette.orange,
           ),
           SwitchListTile(
+            key: const Key('settings_compress_images'),
             value: true,
             onChanged: (_) {},
             title: const Text('Compress images for report output'),
@@ -83,6 +85,7 @@ class _SettingsPanel extends StatelessWidget {
             activeThumbColor: CtsPalette.orange,
           ),
           SwitchListTile(
+            key: const Key('settings_save_recent_recipients'),
             value: true,
             onChanged: (_) {},
             title: const Text('Save recent email recipients'),
@@ -92,6 +95,7 @@ class _SettingsPanel extends StatelessWidget {
             activeThumbColor: CtsPalette.orange,
           ),
           SwitchListTile(
+            key: const Key('settings_branded_theme'),
             value: true,
             onChanged: (_) {},
             title: const Text('Use branded industrial theme'),

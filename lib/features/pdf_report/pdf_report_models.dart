@@ -23,11 +23,11 @@ extension ReportConditionRatingLabel on ReportConditionRating {
   String get label {
     switch (this) {
       case ReportConditionRating.satisfactory:
-        return 'Satisfactory';
+        return 'Good';
       case ReportConditionRating.monitor:
-        return 'Monitor / At Risk';
+        return 'Fair';
       case ReportConditionRating.unsatisfactory:
-        return 'Unsatisfactory';
+        return 'Poor';
       case ReportConditionRating.critical:
         return 'Critical / Out of Service';
     }

@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/underground_template.dart';
+
 class BackupServiceException implements Exception {
   BackupServiceException(this.message, {required this.code});
 
@@ -96,13 +98,14 @@ class BackupService {
     final rootDirectory = await _buildExportDirectory();
     final fileName =
         archiveFileName ??
-        '${_safeFileStem('CTS_Fluid_Power_Inspection_Report_${data.documentNumber}_${data.customer}_${data.workOrderNumber}')}.ctsinspection.zip';
+        '${UndergroundTemplate.exportFilePrefix}_${_safeFileStem(data.documentNumber)}_${UndergroundTemplate.exportFileSuffix}.zip';
     final archiveFile = File(p.join(rootDirectory.path, fileName));
     final archive = Archive();
     final warnings = <String>[];
     var exportedFileCount = 0;
 
-    _addJsonEntry(archive, 'inspection.json', data.inspectionJson);
+    final inspectionJson = _withTemplateMetadata(data.inspectionJson);
+    _addJsonEntry(archive, 'inspection.json', inspectionJson);
     exportedFileCount++;
 
     for (final photo in data.photoFiles) {
@@ -144,6 +147,9 @@ class BackupService {
       'documentNumber': data.documentNumber,
       'customer': data.customer,
       'workOrderNumber': data.workOrderNumber,
+      'appName': UndergroundTemplate.appName,
+      'templateKey': UndergroundTemplate.templateKey,
+      'templateVersion': UndergroundTemplate.templateVersion,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'warnings': warnings,
     };
@@ -230,6 +236,15 @@ class BackupService {
       );
     }
 
+    inspectionJson
+      ..putIfAbsent('templateKey', () => UndergroundTemplate.templateKey)
+      ..putIfAbsent(
+        'templateVersion',
+        () => UndergroundTemplate.templateVersion,
+      )
+      ..putIfAbsent('appName', () => UndergroundTemplate.appName)
+      ..['restoredFromExportPath'] = archiveFile.path;
+
     var documentNumber = originalDocumentNumber;
     var documentNumberChanged = false;
     if (existingDocumentNumbers.contains(originalDocumentNumber)) {
@@ -237,6 +252,7 @@ class BackupService {
           conflictResolver?.call(originalDocumentNumber) ??
           _generateImportedDocumentNumber(originalDocumentNumber);
       inspectionJson['documentNumber'] = documentNumber;
+      inspectionJson['originalDocumentNumber'] = originalDocumentNumber;
       documentNumberChanged = true;
       warnings.add(
         'Document number conflict resolved by importing as $documentNumber.',
@@ -270,6 +286,16 @@ class BackupService {
   void _addJsonEntry(Archive archive, String name, Map<String, dynamic> json) {
     final bytes = utf8.encode(jsonEncode(json));
     archive.addFile(ArchiveFile(name, bytes.length, bytes));
+  }
+
+  Map<String, dynamic> _withTemplateMetadata(Map<String, dynamic> json) {
+    return <String, dynamic>{
+      ...json,
+      'templateKey': json['templateKey'] ?? UndergroundTemplate.templateKey,
+      'templateVersion':
+          json['templateVersion'] ?? UndergroundTemplate.templateVersion,
+      'appName': json['appName'] ?? UndergroundTemplate.appName,
+    };
   }
 
   Map<String, dynamic> _decodeInspectionJson(File file) {

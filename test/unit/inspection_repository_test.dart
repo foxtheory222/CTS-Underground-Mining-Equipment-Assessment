@@ -117,7 +117,7 @@ void main() {
         id: 'searchable',
         documentNumber: '20260420-0003',
         status: InspectionStatus.inProgress,
-        customer: 'Contoso Hydraulics',
+        customer: 'Moraine Underground',
         workOrderNumber: 'WO-4242',
         customerReference: 'PO-4242',
         assetName: 'Boom Lift',
@@ -134,7 +134,7 @@ void main() {
       );
       expect(
         await repository.search(
-          const InspectionSearchQuery(term: 'Contoso Hydraulics'),
+          const InspectionSearchQuery(term: 'Moraine Underground'),
         ),
         hasLength(1),
       );

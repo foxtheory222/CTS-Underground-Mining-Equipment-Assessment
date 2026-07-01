@@ -39,7 +39,6 @@ class InspectionRepository {
       workOrderNumber: duplicateSource?.workOrderNumber ?? '',
       customerReference: duplicateSource?.customerReference ?? '',
       assetName: duplicateSource?.assetName ?? '',
-      hpuAssetIdName: duplicateSource?.hpuAssetIdName ?? '',
       mineSite: duplicateSource?.mineSite ?? '',
       machineType: duplicateSource?.machineType ?? '',
       manufacturer: duplicateSource?.manufacturer ?? '',

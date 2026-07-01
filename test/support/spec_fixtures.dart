@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cts_underground_mining_assessment/core/constants.dart';
+import 'package:cts_underground_mining_assessment/core/underground_template.dart';
 import 'package:cts_underground_mining_assessment/data/models/inspection_enums.dart';
 import 'package:cts_underground_mining_assessment/features/pdf_report/pdf_report_models.dart';
 import 'package:path/path.dart' as p;
@@ -19,7 +20,7 @@ Future<SpecInspection> seedCleanPass(SpecInspectionService service) async {
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48152',
     customerReference: 'PO-1188',
-    assetName: 'HPU-07',
+    assetName: 'Rock Scaler RS-1007',
     siteLocation: 'Edmonton Service Yard',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -55,7 +56,7 @@ Future<SpecInspection> seedAtRisk(SpecInspectionService service) async {
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48153',
     customerReference: 'PO-1189',
-    assetName: 'HPU-08',
+    assetName: 'Jumbo Drill JD-1008',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -90,13 +91,13 @@ Future<SpecInspection> seedAtRisk(SpecInspectionService service) async {
   return inspection;
 }
 
-Future<SpecInspection> seedUnsatisfactory(SpecInspectionService service) async {
+Future<SpecInspection> seedPoor(SpecInspectionService service) async {
   final inspection = service.createInspection(
     now: DateTime.utc(2026, 4, 18, 16, 30),
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48154',
     customerReference: 'PO-1190',
-    assetName: 'HPU-09',
+    assetName: 'Bolter BO-1009',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -138,7 +139,7 @@ Future<SpecInspection> seedCritical(SpecInspectionService service) async {
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48155',
     customerReference: 'PO-1191',
-    assetName: 'HPU-10',
+    assetName: 'Utility Vehicle UV-1010',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -182,7 +183,7 @@ Future<SpecInspection> seedManyPhotos(SpecInspectionService service) async {
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48156',
     customerReference: 'PO-1192',
-    assetName: 'HPU-11',
+    assetName: 'Personnel Carrier PC-1011',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -191,7 +192,7 @@ Future<SpecInspection> seedManyPhotos(SpecInspectionService service) async {
     inspection: inspection,
     sectionKey: InspectionSectionKeys.jobAssetIdentification,
     itemKey: InspectionItemKeys.overviewPhotos,
-    itemLabel: 'HPU Wide Shot',
+    itemLabel: 'Machine Wide Shot',
     fieldType: InspectionFieldType.photo,
     value: 'photos',
     isRequired: true,
@@ -218,7 +219,7 @@ Future<SpecInspection> seedHoseReplacement(
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48157',
     customerReference: 'PO-1193',
-    assetName: 'HPU-12',
+    assetName: 'LHD Loader LHD-1012',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -246,7 +247,7 @@ Future<SpecInspection> seedExportImport(SpecInspectionService service) async {
     customer: 'Acme Manufacturing',
     workOrderNumber: 'WO-48158',
     customerReference: 'PO-1194',
-    assetName: 'HPU-13',
+    assetName: 'Rock Scaler RS-1013',
     siteLocation: 'Main Plant',
     technicianName: 'Jordan Lee',
     servicingShop: 'CTS North Shop',
@@ -433,6 +434,6 @@ InspectionReportData toReportData(SpecInspection inspection) {
 String bundlePathFor(SpecInspection inspection) {
   return p.join(
     Directory.systemTemp.path,
-    '${inspection.documentNumber}.ctsinspection.zip',
+    '${UndergroundTemplate.exportFilePrefix}_${inspection.documentNumber}_${UndergroundTemplate.exportFileSuffix}.zip',
   );
 }

@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../core/constants.dart';
+import '../core/underground_template.dart';
 import '../features/pdf_report/pdf_report_models.dart';
 
 class PdfService {
@@ -15,9 +15,10 @@ class PdfService {
 
   final bool compress;
 
-  static const String reportTitle = AppConstants.reportTitle;
+  static const String reportTitle = UndergroundTemplate.reportTitle;
 
   static final DateFormat _dateTimeFormat = DateFormat('MMM d, yyyy h:mm a');
+  static final DateFormat _fileDateFormat = DateFormat('yyyyMMdd');
 
   Future<Uint8List> generateInspectionReportBytes(
     InspectionReportData data, {
@@ -28,7 +29,7 @@ class PdfService {
       author: 'Combined Technical Services',
       subject: reportTitle,
       keywords:
-          'Combined Technical Services, inspection, report, hydraulics, underground mining equipment',
+          'Combined Technical Services, underground mining equipment, rebuild assessment, life extension report',
       compress: compress,
       theme: pw.ThemeData.withFont(),
     );
@@ -82,8 +83,12 @@ class PdfService {
 
   static String buildReportFileName(InspectionReportData data) {
     final safeCustomer = _sanitizeFilePart(data.customer);
-    final safeWorkOrder = _sanitizeFilePart(data.workOrderNumber);
-    return 'CTS_Fluid_Power_Inspection_Report_${data.documentNumber}_${safeCustomer}_$safeWorkOrder.pdf';
+    final safeMachineOrSerial = _sanitizeFilePart(data.assetName);
+    final inspectionDate = _fileDateFormat.format(
+      data.inspectionDateTime.toLocal(),
+    );
+    final safeDocumentNumber = _sanitizeFilePart(data.documentNumber);
+    return '${UndergroundTemplate.reportFilePrefix}_${safeCustomer}_${safeMachineOrSerial}_${inspectionDate}_$safeDocumentNumber.pdf';
   }
 
   pw.Widget _buildCoverPage(InspectionReportData data, pw.ImageProvider? logo) {
@@ -142,6 +147,7 @@ class PdfService {
                 flex: 5,
                 child: _infoCard('Inspection Summary', [
                   _kv('Document number', data.documentNumber),
+                  _kv('Template version', UndergroundTemplate.templateVersion),
                   _kv('Customer', data.customer),
                   _kv('Work order', data.workOrderNumber),
                   _kv('Customer reference / PO', data.customerReference),
@@ -149,6 +155,7 @@ class PdfService {
                   _kv('Location / site', data.siteLocation),
                   _kv('Technician', data.technicianName),
                   _kv('Servicing shop', data.servicingShop),
+                  _kv('Currency', UndergroundTemplate.currency),
                   _kv(
                     'Inspection date/time',
                     _formatDateTime(data.inspectionDateTime),
@@ -165,8 +172,8 @@ class PdfService {
                 flex: 3,
                 child: _infoCard('Counts', [
                   _kv('Flagged items', data.flaggedItemCount.toString()),
-                  _kv('At Risk', data.atRiskCount.toString()),
-                  _kv('Unsatisfactory', data.unsatisfactoryCount.toString()),
+                  _kv('Fair', data.atRiskCount.toString()),
+                  _kv('Poor', data.unsatisfactoryCount.toString()),
                   _kv('Critical', data.criticalCount.toString()),
                   _kv('Action items', data.actionItems.length.toString()),
                   _kv('Photos', data.photoCount.toString()),
@@ -747,14 +754,10 @@ class PdfService {
           PdfColors.orange700,
         ),
         pw.SizedBox(width: 8),
-        _summaryTile(
-          'At Risk',
-          data.atRiskCount.toString(),
-          PdfColors.amber800,
-        ),
+        _summaryTile('Fair', data.atRiskCount.toString(), PdfColors.amber800),
         pw.SizedBox(width: 8),
         _summaryTile(
-          'Unsat.',
+          'Poor',
           data.unsatisfactoryCount.toString(),
           PdfColors.deepOrange700,
         ),
@@ -996,7 +999,7 @@ class PdfService {
       alignment: pw.Alignment.centerRight,
       margin: const pw.EdgeInsets.only(top: 6),
       child: pw.Text(
-        'Private & confidential  |  Page ${context.pageNumber} of ${context.pagesCount}',
+        'Private & confidential  |  Template version ${UndergroundTemplate.templateVersion}  |  Page ${context.pageNumber} of ${context.pagesCount}',
         style: pw.TextStyle(fontSize: 8.5, color: PdfColors.blueGrey600),
       ),
     );
@@ -1062,8 +1065,9 @@ class PdfService {
   static String _sanitizeFilePart(String value) {
     final sanitized = value
         .trim()
-        .replaceAll(RegExp(r'[\\/:*?"<>|]+'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ');
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
     return sanitized.isEmpty ? 'Inspection' : sanitized;
   }
 

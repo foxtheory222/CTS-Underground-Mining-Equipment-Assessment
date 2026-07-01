@@ -175,6 +175,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             children: [
               for (final purpose in UndergroundTemplate.purposeOptions)
                 FilterChip(
+                  key: Key('purpose_${_controlKeyPart(purpose)}'),
                   label: Text(purpose),
                   selected: _selectedPurposes.contains(purpose),
                   onSelected: (selected) {
@@ -198,6 +199,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             children: [
               for (final machineType in UndergroundTemplate.machineTypes)
                 ChoiceChip(
+                  key: Key('machine_${_controlKeyPart(machineType)}'),
                   label: Text(machineType),
                   selected: _machineType == machineType,
                   onSelected: (_) => setState(() => _machineType = machineType),
@@ -227,6 +229,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             children: [
               for (final status in UndergroundTemplate.assetStatusOptions)
                 ChoiceChip(
+                  key: Key('asset_status_${_controlKeyPart(status)}'),
                   label: Text(status),
                   selected: _assetStatus == status,
                   onSelected: (_) => setState(() => _assetStatus = status),
@@ -273,6 +276,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             children: [
               for (final rating in UndergroundTemplate.globalRatingOptions)
                 ChoiceChip(
+                  key: Key('rating_${_controlKeyPart(rating)}'),
                   label: Text(rating),
                   selected: _rating == rating,
                   onSelected: (_) => setState(() => _rating = rating),
@@ -281,6 +285,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
           ),
           const SizedBox(height: 14),
           SwitchListTile(
+            key: const Key('critical_switch'),
             contentPadding: EdgeInsets.zero,
             value: _critical,
             onChanged: (value) => setState(() => _critical = value),
@@ -292,6 +297,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
           ),
           if (_critical)
             CheckboxListTile(
+              key: const Key('critical_ack_checkbox'),
               contentPadding: EdgeInsets.zero,
               value: _criticalAcknowledged,
               onChanged: (value) {
@@ -371,6 +377,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               for (final recommendation
                   in UndergroundTemplate.finalRecommendationOptions)
                 ChoiceChip(
+                  key: Key('recommendation_${_controlKeyPart(recommendation)}'),
                   label: Text(recommendation),
                   selected: _finalRecommendation == recommendation,
                   onSelected: (_) {
@@ -493,6 +500,7 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             ],
           ),
           Slider(
+            key: Key('score_slider_${field.key}'),
             value: score.toDouble(),
             min: field.min.toDouble(),
             max: field.max.toDouble(),
@@ -506,6 +514,11 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       ),
     );
   }
+
+  String _controlKeyPart(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'^_|_$'), '');
 
   Widget _fieldGrid(List<Widget> children) {
     return LayoutBuilder(
