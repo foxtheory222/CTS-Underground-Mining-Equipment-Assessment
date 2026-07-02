@@ -1103,7 +1103,7 @@ class PdfService {
   Future<pw.ImageProvider?> _resolveLogoImage(InspectionReportData data) async {
     final branding = data.branding;
     if (branding.logoBytes != null) {
-      if (img.decodeImage(branding.logoBytes!) != null) {
+      if (_canDecodeImage(branding.logoBytes!)) {
         return pw.MemoryImage(branding.logoBytes!);
       }
       return null;
@@ -1113,7 +1113,7 @@ class PdfService {
     try {
       final bytes = await rootBundle.load(assetPath);
       final rawBytes = bytes.buffer.asUint8List();
-      if (img.decodeImage(rawBytes) != null) {
+      if (_canDecodeImage(rawBytes)) {
         return pw.MemoryImage(rawBytes);
       }
       return null;
@@ -1129,7 +1129,7 @@ class PdfService {
       return null;
     }
     if (signature.bytes != null) {
-      if (img.decodeImage(signature.bytes!) != null) {
+      if (_canDecodeImage(signature.bytes!)) {
         return pw.MemoryImage(signature.bytes!);
       }
       return null;
@@ -1138,7 +1138,7 @@ class PdfService {
       final file = File(signature.filePath!);
       if (await file.exists()) {
         final bytes = await file.readAsBytes();
-        if (img.decodeImage(bytes) != null) {
+        if (_canDecodeImage(bytes)) {
           return pw.MemoryImage(bytes);
         }
       }
@@ -1163,12 +1163,20 @@ class PdfService {
       if (bytes == null || bytes.isEmpty) {
         continue;
       }
-      if (img.decodeImage(bytes) == null) {
+      if (!_canDecodeImage(bytes)) {
         continue;
       }
       resolved.add(_ResolvedPhoto(photo: photo, image: pw.MemoryImage(bytes)));
     }
     return resolved;
+  }
+
+  bool _canDecodeImage(Uint8List bytes) {
+    try {
+      return img.decodeImage(bytes) != null;
+    } catch (_) {
+      return false;
+    }
   }
 }
 

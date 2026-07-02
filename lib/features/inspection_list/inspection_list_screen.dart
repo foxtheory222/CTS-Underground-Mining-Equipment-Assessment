@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -105,6 +107,20 @@ class _InspectionListScreenState extends ConsumerState<InspectionListScreen> {
                             );
                           }
                         },
+                        onExportBundle: inspections.isEmpty
+                            ? null
+                            : () {
+                                unawaited(
+                                  _runListAction(context, () async {
+                                    final result = await controller
+                                        .exportInspectionBundle(
+                                          inspections.first.id,
+                                        );
+                                    return 'Exported bundle: '
+                                        '${result.archiveFile.path}';
+                                  }),
+                                );
+                              },
                       ),
                     ),
                   ],
@@ -125,6 +141,20 @@ class _InspectionListScreenState extends ConsumerState<InspectionListScreen> {
                         );
                       }
                     },
+                    onExportBundle: inspections.isEmpty
+                        ? null
+                        : () {
+                            unawaited(
+                              _runListAction(context, () async {
+                                final result = await controller
+                                    .exportInspectionBundle(
+                                      inspections.first.id,
+                                    );
+                                return 'Exported bundle: '
+                                    '${result.archiveFile.path}';
+                              }),
+                            );
+                          },
                   ),
                 ],
               );
@@ -133,6 +163,26 @@ class _InspectionListScreenState extends ConsumerState<InspectionListScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _runListAction(
+    BuildContext context,
+    Future<String> Function() action,
+  ) async {
+    try {
+      final message = await action();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
   }
 }
 
@@ -262,10 +312,15 @@ class _InspectionTile extends StatelessWidget {
 }
 
 class _SummaryPanel extends StatelessWidget {
-  const _SummaryPanel({required this.results, required this.onNewInspection});
+  const _SummaryPanel({
+    required this.results,
+    required this.onNewInspection,
+    required this.onExportBundle,
+  });
 
   final List<InspectionSummary> results;
   final VoidCallback onNewInspection;
+  final VoidCallback? onExportBundle;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +371,7 @@ class _SummaryPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: onExportBundle,
             icon: const Icon(Icons.file_download_outlined),
             label: const Text('Export bundle'),
           ),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import 'constants.dart';
@@ -238,3 +240,55 @@ const inspectionSectionTitles = <String, String>{
       'SECTION 12 - REBUILD RECOMMENDATIONS',
   InspectionSectionKeys.reviewCompletion: 'FINAL CTS RECOMMENDATION & SIGNOFF',
 };
+
+class InspectionFormDraft {
+  const InspectionFormDraft({
+    required this.inspectionId,
+    required this.customer,
+    required this.mineSite,
+    required this.manufacturer,
+    required this.model,
+    required this.serialNumber,
+    required this.machineHours,
+    required this.inspector,
+    required this.selectedPurposes,
+    required this.healthScores,
+    required this.machineType,
+    required this.assetStatus,
+    required this.rating,
+    required this.finalRecommendation,
+    required this.critical,
+    required this.criticalAcknowledged,
+    required this.comment,
+    required this.costComponent,
+    required this.costRepair,
+    required this.costAmount,
+    required this.costDowntime,
+    this.signaturePngBytes,
+    this.createActionItem = false,
+  });
+
+  final String inspectionId;
+  final String customer;
+  final String mineSite;
+  final String manufacturer;
+  final String model;
+  final String serialNumber;
+  final String machineHours;
+  final String inspector;
+  final Set<String> selectedPurposes;
+  final Map<String, int> healthScores;
+  final String machineType;
+  final String assetStatus;
+  final String rating;
+  final String finalRecommendation;
+  final bool critical;
+  final bool criticalAcknowledged;
+  final String comment;
+  final String costComponent;
+  final String costRepair;
+  final String costAmount;
+  final String costDowntime;
+  final Uint8List? signaturePngBytes;
+  final bool createActionItem;
+}

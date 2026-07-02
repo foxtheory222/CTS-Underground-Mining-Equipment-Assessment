@@ -1,22 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signature/signature.dart';
 
 import '../../core/theme.dart';
 import '../../core/underground_template.dart';
 import '../../core/workspace_models.dart';
+import '../../core/workspace_providers.dart';
+import '../../data/repositories/inspection_repository.dart';
 import '../../widgets/section_card.dart';
 import '../../widgets/signature_pad.dart';
 
-class InspectionFormScreen extends StatefulWidget {
+class InspectionFormScreen extends ConsumerStatefulWidget {
   const InspectionFormScreen({super.key, this.seed});
 
   final InspectionSummary? seed;
 
   @override
-  State<InspectionFormScreen> createState() => _InspectionFormScreenState();
+  ConsumerState<InspectionFormScreen> createState() =>
+      _InspectionFormScreenState();
 }
 
-class _InspectionFormScreenState extends State<InspectionFormScreen> {
+class _InspectionFormScreenState extends ConsumerState<InspectionFormScreen> {
   late final ScrollController _scrollController;
   late final SignatureController _signatureController;
   late final TextEditingController _customer;
@@ -44,11 +50,13 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
   bool _critical = false;
   bool _criticalAcknowledged = false;
   bool _signed = false;
+  String? _inspectionId;
 
   @override
   void initState() {
     super.initState();
     final seed = widget.seed;
+    _inspectionId = seed?.id;
     _scrollController = ScrollController();
     _signatureController = SignatureController(
       penStrokeWidth: 3,
@@ -320,12 +328,12 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
             runSpacing: 12,
             children: [
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: () => unawaited(_attachPhoto()),
                 icon: const Icon(Icons.add_a_photo_outlined),
                 label: const Text('Attach Photo'),
               ),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () => unawaited(_createActionItem()),
                 icon: const Icon(Icons.assignment_turned_in_outlined),
                 label: const Text('Create Action Item'),
               ),
@@ -461,13 +469,13 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
               ),
           const SizedBox(height: 18),
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: () => unawaited(_generatePdf()),
             icon: const Icon(Icons.picture_as_pdf_outlined),
             label: const Text('Generate PDF'),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () => unawaited(_shareEmailHandoff()),
             icon: const Icon(Icons.ios_share_outlined),
             label: const Text('Share / Email Handoff'),
           ),
@@ -596,6 +604,112 @@ class _InspectionFormScreenState extends State<InspectionFormScreen> {
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOut,
     );
+  }
+
+  Future<void> _attachPhoto() async {
+    await _runFormAction(() async {
+      final draft = await _buildDraft();
+      await ref.read(workspaceProvider).attachPhotoForDraft(draft);
+      return 'Photo attached to inspection evidence.';
+    });
+  }
+
+  Future<void> _createActionItem() async {
+    await _runFormAction(() async {
+      final draft = await _buildDraft(createActionItem: true);
+      await ref.read(workspaceProvider).saveFormDraft(draft);
+      return 'Action item created.';
+    });
+  }
+
+  Future<void> _generatePdf() async {
+    await _runFormAction(() async {
+      final draft = await _buildDraft();
+      final saved = await ref.read(workspaceProvider).saveFormDraft(draft);
+      final file = await ref
+          .read(workspaceProvider)
+          .generatePdfForInspection(saved.id);
+      return 'PDF generated: ${file.path}';
+    });
+  }
+
+  Future<void> _shareEmailHandoff() async {
+    await _runFormAction(() async {
+      final draft = await _buildDraft();
+      final saved = await ref.read(workspaceProvider).saveFormDraft(draft);
+      final result = await ref
+          .read(workspaceProvider)
+          .sharePdfForInspection(saved.id);
+      return 'Email/share handoff opened: ${result.attachmentPath}';
+    });
+  }
+
+  Future<void> _runFormAction(Future<String> Function() action) async {
+    try {
+      final message = await action();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_formActionError(error))));
+      }
+    }
+  }
+
+  String _formActionError(Object error) {
+    if (error is InspectionRepositoryException &&
+        error.validationIssues.isNotEmpty) {
+      return error.validationIssues.first.message;
+    }
+    return error.toString();
+  }
+
+  Future<InspectionFormDraft> _buildDraft({
+    bool createActionItem = false,
+  }) async {
+    final signatureBytes = _signatureController.isNotEmpty
+        ? await _signatureController.toPngBytes()
+        : null;
+    return InspectionFormDraft(
+      inspectionId: await _ensureInspectionId(),
+      customer: _customer.text,
+      mineSite: _mineSite.text,
+      manufacturer: _manufacturer.text,
+      model: _model.text,
+      serialNumber: _serialNumber.text,
+      machineHours: _machineHours.text,
+      inspector: _inspector.text,
+      selectedPurposes: Set<String>.of(_selectedPurposes),
+      healthScores: Map<String, int>.of(_scores),
+      machineType: _machineType,
+      assetStatus: _assetStatus,
+      rating: _rating,
+      finalRecommendation: _finalRecommendation,
+      critical: _critical,
+      criticalAcknowledged: _criticalAcknowledged,
+      comment: _comment.text,
+      costComponent: _costComponent.text,
+      costRepair: _costRepair.text,
+      costAmount: _costAmount.text,
+      costDowntime: _costDowntime.text,
+      signaturePngBytes: signatureBytes,
+      createActionItem: createActionItem,
+    );
+  }
+
+  Future<String> _ensureInspectionId() async {
+    final existing = _inspectionId;
+    if (existing != null) {
+      return existing;
+    }
+    final inspection = await ref.read(workspaceProvider).createInspection();
+    _inspectionId = inspection.id;
+    return inspection.id;
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme.dart';
 import '../../core/workspace_models.dart';
 import '../../core/workspace_providers.dart';
+import '../../data/repositories/inspection_repository.dart';
 import '../../widgets/photo_grid.dart';
 import '../../widgets/section_card.dart';
 import '../../widgets/status_badge.dart';
@@ -52,7 +55,40 @@ class InspectionDetailScreen extends ConsumerWidget {
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= 1180;
               final details = _DetailSections(inspection: inspection);
-              final side = _SideSummary(inspection: inspection);
+              final side = _SideSummary(
+                inspection: inspection,
+                onGeneratePdf: () {
+                  unawaited(
+                    _runReportAction(context, () async {
+                      final file = await controller.generatePdfForInspection(
+                        inspection.id,
+                      );
+                      return 'PDF generated: ${file.path}';
+                    }),
+                  );
+                },
+                onEmailHandoff: () {
+                  unawaited(
+                    _runReportAction(context, () async {
+                      final result = await controller.sharePdfForInspection(
+                        inspection.id,
+                      );
+                      return 'Email/share handoff opened: '
+                          '${result.attachmentPath}';
+                    }),
+                  );
+                },
+                onExport: () {
+                  unawaited(
+                    _runReportAction(context, () async {
+                      final result = await controller.exportInspectionBundle(
+                        inspection.id,
+                      );
+                      return 'Exported bundle: ${result.archiveFile.path}';
+                    }),
+                  );
+                },
+              );
               if (wide) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,6 +107,34 @@ class InspectionDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _runReportAction(
+    BuildContext context,
+    Future<String> Function() action,
+  ) async {
+    try {
+      final message = await action();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_reportActionErrorMessage(error))),
+        );
+      }
+    }
+  }
+
+  String _reportActionErrorMessage(Object error) {
+    if (error is InspectionRepositoryException &&
+        error.validationIssues.isNotEmpty) {
+      return error.validationIssues.first.message;
+    }
+    return error.toString();
   }
 }
 
@@ -534,9 +598,17 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _SideSummary extends StatelessWidget {
-  const _SideSummary({required this.inspection});
+  const _SideSummary({
+    required this.inspection,
+    required this.onGeneratePdf,
+    required this.onEmailHandoff,
+    required this.onExport,
+  });
 
   final InspectionSummary inspection;
+  final VoidCallback onGeneratePdf;
+  final VoidCallback onEmailHandoff;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -549,21 +621,21 @@ class _SideSummary extends StatelessWidget {
             icon: Icons.picture_as_pdf_outlined,
             title: 'Generate PDF',
             subtitle: 'Create the branded local report.',
-            onTap: () {},
+            onTap: onGeneratePdf,
           ),
           const SizedBox(height: 12),
           _ActionButton(
             icon: Icons.email_outlined,
             title: 'Email handoff',
             subtitle: 'Open the device mail or share flow.',
-            onTap: () {},
+            onTap: onEmailHandoff,
           ),
           const SizedBox(height: 12),
           _ActionButton(
             icon: Icons.file_download_outlined,
             title: 'Export inspection',
             subtitle: 'Bundle PDF and restore data locally.',
-            onTap: () {},
+            onTap: onExport,
           ),
           const SizedBox(height: 16),
           _SummaryMini(

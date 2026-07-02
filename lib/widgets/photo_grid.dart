@@ -11,17 +11,19 @@ class PhotoGrid extends StatelessWidget {
     required this.photos,
     this.emptyLabel = 'No photos added yet.',
     this.showAddTile = true,
+    this.onAddPhoto,
   });
 
   final List<InspectionPhotoView> photos;
   final String emptyLabel;
   final bool showAddTile;
+  final VoidCallback? onAddPhoto;
 
   @override
   Widget build(BuildContext context) {
     final items = List<InspectionPhotoView>.of(photos);
     if (items.isEmpty) {
-      return _EmptyPhotoState(label: emptyLabel);
+      return _EmptyPhotoState(label: emptyLabel, onAddPhoto: onAddPhoto);
     }
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -43,7 +45,7 @@ class PhotoGrid extends StatelessWidget {
           ),
           itemBuilder: (context, index) {
             if (showAddTile && index == itemCount - 1) {
-              return _AddPhotoTile(label: 'Add photo');
+              return _AddPhotoTile(label: 'Add photo', onAddPhoto: onAddPhoto);
             }
             final photo = items[index];
             return _PhotoCard(photo: photo, index: index + 1);
@@ -144,16 +146,17 @@ class _PhotoCard extends StatelessWidget {
 }
 
 class _AddPhotoTile extends StatelessWidget {
-  const _AddPhotoTile({required this.label});
+  const _AddPhotoTile({required this.label, required this.onAddPhoto});
 
   final String label;
+  final VoidCallback? onAddPhoto;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {},
+        onTap: onAddPhoto,
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -202,9 +205,10 @@ class _AddPhotoTile extends StatelessWidget {
 }
 
 class _EmptyPhotoState extends StatelessWidget {
-  const _EmptyPhotoState({required this.label});
+  const _EmptyPhotoState({required this.label, required this.onAddPhoto});
 
   final String label;
+  final VoidCallback? onAddPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +244,7 @@ class _EmptyPhotoState extends StatelessWidget {
             ),
           ),
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: onAddPhoto,
             icon: const Icon(Icons.add),
             label: const Text('Add first photo'),
           ),

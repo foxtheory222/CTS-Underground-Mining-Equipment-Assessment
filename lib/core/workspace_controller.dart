@@ -1,22 +1,52 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 import 'constants.dart';
+import 'file_utils.dart';
 import 'theme.dart';
+import 'underground_template.dart';
+import 'validators.dart';
 import '../data/models/inspection_enums.dart';
 import '../data/models/inspection_models.dart';
 import '../data/repositories/inspection_repository.dart';
 import '../services/backup_service.dart';
+import '../services/email_service.dart';
+import '../services/inspection_report_mapper.dart';
+import '../services/pdf_service.dart';
+import '../services/photo_service.dart';
 import 'workspace_models.dart';
+
+typedef InspectionReportDirectoryProvider =
+    Future<Directory> Function(String inspectionId);
+typedef InspectionSignatureDirectoryProvider =
+    Future<Directory> Function(String inspectionId);
 
 class AppWorkspaceController extends ChangeNotifier {
   AppWorkspaceController({
     InspectionRepository? repository,
+    PdfService? pdfService,
+    EmailService? emailService,
+    BackupService? backupService,
+    PhotoService? photoService,
+    InspectionReportDirectoryProvider? reportDirectoryProvider,
+    InspectionSignatureDirectoryProvider? signatureDirectoryProvider,
+    Uuid? uuid,
     bool autoLoad = true,
     List<InspectionSummary>? seedInspections,
   }) : _repository = repository,
+       _pdfService = pdfService ?? PdfService(),
+       _emailService = emailService ?? EmailService(),
+       _backupService = backupService ?? BackupService(),
+       _photoService = photoService ?? PhotoService(),
+       _reportDirectoryProvider =
+           reportDirectoryProvider ?? FileUtils.inspectionReportsDirectory,
+       _signatureDirectoryProvider =
+           signatureDirectoryProvider ?? FileUtils.inspectionDirectory,
+       _uuid = uuid ?? const Uuid(),
        _inspections =
            seedInspections ??
            (repository == null ? _seedInspections() : <InspectionSummary>[]) {
@@ -26,6 +56,13 @@ class AppWorkspaceController extends ChangeNotifier {
   }
 
   final InspectionRepository? _repository;
+  final PdfService _pdfService;
+  final EmailService _emailService;
+  final BackupService _backupService;
+  final PhotoService _photoService;
+  final InspectionReportDirectoryProvider _reportDirectoryProvider;
+  final InspectionSignatureDirectoryProvider _signatureDirectoryProvider;
+  final Uuid _uuid;
   final List<InspectionSummary> _inspections;
   String _searchQuery = '';
   InspectionStatus? _statusFilter;
@@ -281,6 +318,122 @@ class AppWorkspaceController extends ChangeNotifier {
     return summary;
   }
 
+  Future<InspectionSummary> saveFormDraft(InspectionFormDraft draft) async {
+    final repository = _requiredRepository();
+    final record = await _requiredRecord(draft.inspectionId);
+    final signaturePath = draft.signaturePngBytes == null
+        ? null
+        : await _writeSignaturePng(record.id, draft.signaturePngBytes!);
+    _applyFormDraft(record, draft, signaturePath: signaturePath);
+    final saved = await repository.saveInspection(record);
+    final summary = _summaryFromRecord(saved);
+    _upsertSummary(summary, insertAtTop: false);
+    return summary;
+  }
+
+  Future<InspectionSummary> attachPhotoForDraft(
+    InspectionFormDraft draft, {
+    PhotoInputSource source = PhotoInputSource.camera,
+  }) async {
+    final repository = _requiredRepository();
+    final record = await _requiredRecord(draft.inspectionId);
+    final signaturePath = draft.signaturePngBytes == null
+        ? null
+        : await _writeSignaturePng(record.id, draft.signaturePngBytes!);
+    _applyFormDraft(record, draft, signaturePath: signaturePath);
+    final itemKey = _draftActionItemKey;
+    final photo = await _photoService.addPhoto(
+      inspectionId: record.id,
+      sectionKey: _draftActionSectionKey,
+      itemKey: itemKey,
+      source: source,
+      sortOrder: record.photosForItem(itemKey).length,
+      caption: draft.comment.trim().isEmpty
+          ? 'Inspection evidence'
+          : draft.comment.trim(),
+    );
+    if (photo != null) {
+      record.photos.add(photo);
+    }
+    final saved = await repository.saveInspection(record);
+    final summary = _summaryFromRecord(saved);
+    _upsertSummary(summary, insertAtTop: false);
+    return summary;
+  }
+
+  Future<File> generatePdfForInspection(String inspectionId) async {
+    final repository = _requiredRepository();
+    final record = await _requiredRecord(inspectionId);
+    final outputDirectory = await _reportDirectoryProvider(record.id);
+    final pdfFile = await _pdfService.generateInspectionReportFile(
+      inspectionRecordToReportData(record),
+      outputDirectory: outputDirectory,
+    );
+    record.generatedPdfPath = pdfFile.path;
+    final saved = await repository.saveInspection(record);
+    _upsertSummary(_summaryFromRecord(saved), insertAtTop: false);
+    return pdfFile;
+  }
+
+  Future<EmailHandoffResult> sharePdfForInspection(
+    String inspectionId, {
+    List<String> recipients = const <String>[],
+  }) async {
+    final repository = _requiredRepository();
+    var record = await _requiredRecord(inspectionId);
+    var pdfFile = _existingGeneratedPdf(record);
+    if (pdfFile == null) {
+      pdfFile = await generatePdfForInspection(record.id);
+      record = await _requiredRecord(inspectionId);
+    }
+
+    final validation = InspectionValidator.validateForCompletion(record);
+    if (!validation.isValid) {
+      throw InspectionRepositoryException(
+        'Inspection must be complete before email handoff.',
+        code: InspectionRepositoryErrorCode.invalidCompletion,
+        validationIssues: validation.issues,
+      );
+    }
+
+    final result = await _emailService.handoffPdf(
+      request: EmailHandoffRequest(
+        pdfFile: pdfFile,
+        subject: 'CTS inspection report ${record.documentNumber}',
+        body:
+            'Attached is the Combined Technical Services underground mining equipment assessment report for ${record.assetName}.',
+        recipients: recipients,
+        customer: record.customer,
+      ),
+    );
+    final emailed = await repository.markEmailed(record);
+    _upsertSummary(_summaryFromRecord(emailed), insertAtTop: false);
+    return result;
+  }
+
+  Future<BackupExportResult> exportInspectionBundle(
+    String inspectionId, {
+    bool generatePdfIfMissing = true,
+  }) async {
+    var record = await _requiredRecord(inspectionId);
+    if (generatePdfIfMissing && _existingGeneratedPdf(record) == null) {
+      await generatePdfForInspection(record.id);
+      record = await _requiredRecord(inspectionId);
+    }
+    return _backupService.exportInspection(
+      data: InspectionBackupData(
+        inspectionJson: record.toJson(),
+        documentNumber: record.documentNumber,
+        customer: record.customer,
+        workOrderNumber: record.workOrderNumber,
+        photoFiles: record.photos
+            .map((photo) => File(photo.filePath))
+            .toList(growable: false),
+        generatedPdfFile: _existingGeneratedPdf(record),
+      ),
+    );
+  }
+
   void _upsertSummary(InspectionSummary summary, {required bool insertAtTop}) {
     final index = _inspections.indexWhere((item) => item.id == summary.id);
     if (index == -1) {
@@ -294,6 +447,249 @@ class AppWorkspaceController extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  InspectionRepository _requiredRepository() {
+    final repository = _repository;
+    if (repository == null) {
+      throw StateError(
+        'This action requires the persistent inspection repository.',
+      );
+    }
+    return repository;
+  }
+
+  Future<InspectionRecord> _requiredRecord(String inspectionId) async {
+    final record = await _requiredRepository().getInspection(inspectionId);
+    if (record == null) {
+      throw StateError('Inspection not found: $inspectionId');
+    }
+    return record;
+  }
+
+  Future<String> _writeSignaturePng(
+    String inspectionId,
+    List<int> signaturePngBytes,
+  ) async {
+    final directory = await _signatureDirectoryProvider(inspectionId);
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}'
+      '${AppConstants.signatureFileName}',
+    );
+    await file.writeAsBytes(signaturePngBytes, flush: true);
+    return file.path;
+  }
+
+  File? _existingGeneratedPdf(InspectionRecord record) {
+    final path = (record.generatedPdfPath ?? '').trim();
+    if (path.isEmpty) {
+      return null;
+    }
+    final file = File(path);
+    return file.existsSync() ? file : null;
+  }
+
+  void _applyFormDraft(
+    InspectionRecord record,
+    InspectionFormDraft draft, {
+    String? signaturePath,
+  }) {
+    record.customer = draft.customer.trim();
+    record.mineSite = draft.mineSite.trim();
+    record.siteLocation = draft.mineSite.trim();
+    record.manufacturer = draft.manufacturer.trim();
+    record.model = draft.model.trim();
+    record.serialNumber = draft.serialNumber.trim();
+    record.machineHours = draft.machineHours.trim();
+    record.technicianName = draft.inspector.trim();
+    record.machineType = draft.machineType;
+    record.selectedPurposes = draft.selectedPurposes.toList(growable: false);
+    record.healthScores = Map<String, int>.of(draft.healthScores);
+    record.assetStatus = draft.assetStatus;
+    record.finalRecommendation = draft.finalRecommendation;
+    record.finalTechComments = draft.comment.trim();
+    record.criticalAcknowledged = draft.criticalAcknowledged;
+    record.assetName = _draftAssetName(draft);
+    record.responses = _responsesFromDraft(record, draft);
+    record.requiredItems = _requiredItemsFromDraft(record, draft);
+    if (signaturePath != null) {
+      record.signatureFilePath = signaturePath;
+    }
+    if (draft.createActionItem) {
+      _ensureDraftActionItem(record, draft);
+    }
+  }
+
+  List<InspectionResponse> _responsesFromDraft(
+    InspectionRecord record,
+    InspectionFormDraft draft,
+  ) {
+    final now = DateTime.now();
+    final responses = <InspectionResponse>[];
+    for (final section in UndergroundTemplate.sections) {
+      if (section.key == 'photographic_evidence') {
+        continue;
+      }
+      for (final itemLabel in section.items) {
+        final itemKey = InspectionValidator.templateItemKey(
+          section.key,
+          itemLabel,
+        );
+        final isDraftActionItem =
+            section.key == _draftActionSectionKey &&
+            itemKey == _draftActionItemKey;
+        final conditionRating = isDraftActionItem
+            ? _conditionRatingFromDraft(draft)
+            : ConditionRating.satisfactory;
+        final value = isDraftActionItem
+            ? _draftRatingValue(draft)
+            : _valueForTemplateItem(draft, itemLabel);
+        responses.add(
+          InspectionResponse(
+            id: _uuid.v4(),
+            inspectionId: record.id,
+            sectionKey: section.key,
+            itemKey: itemKey,
+            itemLabel: itemLabel,
+            fieldType: InspectionFieldType.conditionRating,
+            value: value,
+            conditionRating: conditionRating,
+            isFlagged:
+                isDraftActionItem &&
+                (draft.critical ||
+                    conditionRating?.isFlagged == true ||
+                    draft.rating == 'Not Inspected'),
+            comment: isDraftActionItem ? draft.comment.trim() : null,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+      }
+    }
+    return responses;
+  }
+
+  List<RequiredItemEntry> _requiredItemsFromDraft(
+    InspectionRecord record,
+    InspectionFormDraft draft,
+  ) {
+    final hasCostRow = <String>[
+      draft.costComponent,
+      draft.costRepair,
+      draft.costAmount,
+      draft.costDowntime,
+    ].any((value) => value.trim().isNotEmpty);
+    if (!hasCostRow) {
+      return <RequiredItemEntry>[];
+    }
+    return <RequiredItemEntry>[
+      RequiredItemEntry(
+        id: _uuid.v4(),
+        inspectionId: record.id,
+        itemName: draft.costComponent.trim().isEmpty
+            ? 'Cost forecast item'
+            : draft.costComponent.trim(),
+        description: draft.costRepair.trim(),
+        relatedSectionItem: 'Estimated Rebuild Cost Forecast',
+        notes: [
+          if (draft.costAmount.trim().isNotEmpty)
+            'Estimated cost (${UndergroundTemplate.currency}): '
+                '${draft.costAmount.trim()}',
+          if (draft.costDowntime.trim().isNotEmpty)
+            'Estimated downtime: ${draft.costDowntime.trim()}',
+        ].join(' | '),
+      ),
+    ];
+  }
+
+  void _ensureDraftActionItem(
+    InspectionRecord record,
+    InspectionFormDraft draft,
+  ) {
+    final existing = record.actionItems.any(
+      (action) =>
+          !action.isAutoGenerated &&
+          action.sourceSectionKey == _draftActionSectionKey &&
+          action.sourceItemKey == _draftActionItemKey,
+    );
+    if (existing) {
+      return;
+    }
+    final now = DateTime.now();
+    record.actionItems.add(
+      ActionItem(
+        id: _uuid.v4(),
+        inspectionId: record.id,
+        sourceSectionKey: _draftActionSectionKey,
+        sourceItemKey: _draftActionItemKey,
+        conditionRating: _conditionRatingFromDraft(draft),
+        title: draft.critical
+            ? 'Critical / out-of-service follow-up'
+            : 'Inspection follow-up action',
+        description: draft.comment.trim().isEmpty
+            ? 'Review and correct the flagged inspection item.'
+            : draft.comment.trim(),
+        isAutoGenerated: false,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+  }
+
+  String _valueForTemplateItem(InspectionFormDraft draft, String itemLabel) {
+    return switch (itemLabel) {
+      'OEM' => draft.manufacturer.trim(),
+      'Model' => draft.model.trim(),
+      'Serial Number' => draft.serialNumber.trim(),
+      'Current Hours' => draft.machineHours.trim(),
+      'Comments' => draft.comment.trim(),
+      'Final CTS Recommendation' => draft.finalRecommendation,
+      'CTS Inspector Typed Name' => draft.inspector.trim(),
+      'CTS Inspector Drawn Signature' =>
+        draft.signaturePngBytes == null ? 'Not captured' : 'Captured',
+      'Component' => draft.costComponent.trim(),
+      'Repair Required' => draft.costRepair.trim(),
+      'Estimated Cost' => draft.costAmount.trim(),
+      'Estimated Downtime' => draft.costDowntime.trim(),
+      _ => 'Good',
+    };
+  }
+
+  String _draftRatingValue(InspectionFormDraft draft) {
+    if (draft.critical) {
+      return ConditionRating.criticalOutOfService.value;
+    }
+    return draft.rating;
+  }
+
+  ConditionRating? _conditionRatingFromDraft(InspectionFormDraft draft) {
+    if (draft.critical) {
+      return ConditionRating.criticalOutOfService;
+    }
+    return switch (draft.rating) {
+      'Good' => ConditionRating.satisfactory,
+      'Fair' => ConditionRating.monitorAtRisk,
+      'Poor' => ConditionRating.unsatisfactory,
+      _ => null,
+    };
+  }
+
+  String _draftAssetName(InspectionFormDraft draft) {
+    final parts = <String>[
+      draft.machineType,
+      draft.manufacturer,
+      draft.model,
+      draft.serialNumber,
+    ].map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
+    return parts.isEmpty ? draft.serialNumber.trim() : parts.join(' ');
+  }
+
+  static final String _draftActionSectionKey = UndergroundTemplate.sectionByKey(
+    'hydraulic_system_assessment',
+  ).key;
+  static final String _draftActionItemKey = InspectionValidator.templateItemKey(
+    _draftActionSectionKey,
+    'Hydraulic Hose Inspection',
+  );
 
   InspectionSummary _summaryFromRecord(InspectionRecord record) {
     return InspectionSummary(
