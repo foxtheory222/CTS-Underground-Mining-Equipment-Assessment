@@ -29,13 +29,13 @@ void main() {
         'settings_save_recent_recipients',
         'settings_branded_theme',
       ]) {
-        await _tapByKey(tester, key);
+        await _expectByKey(tester, key);
       }
       expect(find.text('About / Version'), findsOneWidget);
 
       await tester.tap(find.text('New Inspection').last);
       await tester.pumpAndSettle();
-      expect(find.text('SECTION 1 - MACHINE IDENTIFICATION'), findsWidgets);
+      expect(find.text('SECTION 2 - STRUCTURAL INSPECTION'), findsWidgets);
 
       for (final purpose in UndergroundTemplate.purposeOptions) {
         await _tapByKey(tester, 'purpose_${_keyPart(purpose)}');
@@ -72,6 +72,13 @@ void main() {
       }
     },
   );
+}
+
+Future<void> _expectByKey(WidgetTester tester, String key) async {
+  final finder = find.byKey(Key(key));
+  expect(finder, findsOneWidget, reason: 'Missing matrix target: $key');
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tapByKey(WidgetTester tester, String key) async {

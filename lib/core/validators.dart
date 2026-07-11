@@ -363,7 +363,8 @@ class InspectionValidator {
   }
 
   static bool _sectionIsValidatedOutsideResponses(String sectionKey) {
-    return sectionKey == 'photographic_evidence' ||
+    return sectionKey == 'machine_identification' ||
+        sectionKey == 'photographic_evidence' ||
         sectionKey == 'final_recommendation_signoff';
   }
 

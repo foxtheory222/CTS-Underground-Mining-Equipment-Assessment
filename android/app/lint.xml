@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      The CTS legacy launcher art intentionally uses an opaque square canvas
+      around a visible rounded-square brand silhouette. Android lint only
+      samples the outer bitmap pixels and therefore reports a false positive.
+    -->
+    <issue id="IconLauncherShape" severity="ignore" />
+</lint>

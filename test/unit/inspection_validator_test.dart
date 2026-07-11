@@ -78,7 +78,7 @@ void main() {
     expect(result.isValid, isFalse);
     expect(
       result.issues.map((issue) => issue.message),
-      contains('SECTION 1 - MACHINE IDENTIFICATION requires OEM.'),
+      contains('SECTION 2 - STRUCTURAL INSPECTION requires Main Frame.'),
     );
   });
 

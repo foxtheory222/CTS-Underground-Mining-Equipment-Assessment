@@ -160,6 +160,10 @@ class AppWorkspaceController extends ChangeNotifier {
     return null;
   }
 
+  Future<InspectionRecord?> inspectionRecordById(String id) async {
+    return _repository?.getInspection(id);
+  }
+
   List<InspectionSummary> get recentInspections {
     final copy = List<InspectionSummary>.of(_inspections);
     copy.sort((a, b) => b.lastUpdatedAt.compareTo(a.lastUpdatedAt));
@@ -324,7 +328,18 @@ class AppWorkspaceController extends ChangeNotifier {
     final signaturePath = draft.signaturePngBytes == null
         ? null
         : await _writeSignaturePng(record.id, draft.signaturePngBytes!);
-    _applyFormDraft(record, draft, signaturePath: signaturePath);
+    final customerSignaturePath = draft.customerSignaturePngBytes == null
+        ? null
+        : await _writeCustomerSignaturePng(
+            record.id,
+            draft.customerSignaturePngBytes!,
+          );
+    _applyFormDraft(
+      record,
+      draft,
+      signaturePath: signaturePath,
+      customerSignaturePath: customerSignaturePath,
+    );
     final saved = await repository.saveInspection(record);
     final summary = _summaryFromRecord(saved);
     _upsertSummary(summary, insertAtTop: false);
@@ -340,17 +355,32 @@ class AppWorkspaceController extends ChangeNotifier {
     final signaturePath = draft.signaturePngBytes == null
         ? null
         : await _writeSignaturePng(record.id, draft.signaturePngBytes!);
-    _applyFormDraft(record, draft, signaturePath: signaturePath);
-    final itemKey = _draftActionItemKey;
+    final customerSignaturePath = draft.customerSignaturePngBytes == null
+        ? null
+        : await _writeCustomerSignaturePng(
+            record.id,
+            draft.customerSignaturePngBytes!,
+          );
+    _applyFormDraft(
+      record,
+      draft,
+      signaturePath: signaturePath,
+      customerSignaturePath: customerSignaturePath,
+    );
+    final sectionKey = draft.actionSectionKey ?? _draftActionSectionKey;
+    final itemKey = draft.actionItemKey ?? _draftActionItemKey;
+    final itemComment = draft.itemComments[itemKey]?.trim();
     final photo = await _photoService.addPhoto(
       inspectionId: record.id,
-      sectionKey: _draftActionSectionKey,
+      sectionKey: sectionKey,
       itemKey: itemKey,
       source: source,
       sortOrder: record.photosForItem(itemKey).length,
-      caption: draft.comment.trim().isEmpty
-          ? 'Inspection evidence'
-          : draft.comment.trim(),
+      caption: itemComment == null || itemComment.isEmpty
+          ? (draft.comment.trim().isEmpty
+                ? '${draft.actionItemLabel ?? _draftActionItemLabel} evidence'
+                : draft.comment.trim())
+          : itemComment,
     );
     if (photo != null) {
       record.photos.add(photo);
@@ -479,6 +509,19 @@ class AppWorkspaceController extends ChangeNotifier {
     return file.path;
   }
 
+  Future<String> _writeCustomerSignaturePng(
+    String inspectionId,
+    List<int> signaturePngBytes,
+  ) async {
+    final directory = await _signatureDirectoryProvider(inspectionId);
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}'
+      '${AppConstants.customerSignatureFileName}',
+    );
+    await file.writeAsBytes(signaturePngBytes, flush: true);
+    return file.path;
+  }
+
   File? _existingGeneratedPdf(InspectionRecord record) {
     final path = (record.generatedPdfPath ?? '').trim();
     if (path.isEmpty) {
@@ -492,6 +535,7 @@ class AppWorkspaceController extends ChangeNotifier {
     InspectionRecord record,
     InspectionFormDraft draft, {
     String? signaturePath,
+    String? customerSignaturePath,
   }) {
     record.customer = draft.customer.trim();
     record.mineSite = draft.mineSite.trim();
@@ -513,6 +557,13 @@ class AppWorkspaceController extends ChangeNotifier {
     record.requiredItems = _requiredItemsFromDraft(record, draft);
     if (signaturePath != null) {
       record.signatureFilePath = signaturePath;
+    } else if (draft.clearTechnicianSignature) {
+      record.signatureFilePath = null;
+    }
+    if (customerSignaturePath != null) {
+      record.customerSignatureFilePath = customerSignaturePath;
+    } else if (draft.clearCustomerSignature) {
+      record.customerSignatureFilePath = null;
     }
     if (draft.createActionItem) {
       _ensureDraftActionItem(record, draft);
@@ -529,20 +580,29 @@ class AppWorkspaceController extends ChangeNotifier {
       if (section.key == 'photographic_evidence') {
         continue;
       }
+      final isChecklistSection =
+          UndergroundTemplate.isConditionChecklistSectionKey(section.key);
       for (final itemLabel in section.items) {
         final itemKey = InspectionValidator.templateItemKey(
           section.key,
           itemLabel,
         );
         final isDraftActionItem =
+            isChecklistSection &&
             section.key == _draftActionSectionKey &&
             itemKey == _draftActionItemKey;
-        final conditionRating = isDraftActionItem
-            ? _conditionRatingFromDraft(draft)
-            : ConditionRating.satisfactory;
-        final value = isDraftActionItem
-            ? _draftRatingValue(draft)
-            : _valueForTemplateItem(draft, itemLabel);
+        final itemRating = isChecklistSection
+            ? draft.itemRatings[itemKey]
+            : null;
+        final conditionRating = itemRating == null
+            ? null
+            : _conditionRatingFromItemRating(itemRating);
+        final value = isChecklistSection
+            ? itemRating ?? ''
+            : _valueForTemplateItem(record, draft, itemKey, itemLabel);
+        final comment = isChecklistSection
+            ? draft.itemComments[itemKey]?.trim()
+            : null;
         responses.add(
           InspectionResponse(
             id: _uuid.v4(),
@@ -550,15 +610,17 @@ class AppWorkspaceController extends ChangeNotifier {
             sectionKey: section.key,
             itemKey: itemKey,
             itemLabel: itemLabel,
-            fieldType: InspectionFieldType.conditionRating,
+            fieldType: isChecklistSection
+                ? InspectionFieldType.conditionRating
+                : InspectionFieldType.text,
             value: value,
             conditionRating: conditionRating,
-            isFlagged:
-                isDraftActionItem &&
-                (draft.critical ||
-                    conditionRating?.isFlagged == true ||
-                    draft.rating == 'Not Inspected'),
-            comment: isDraftActionItem ? draft.comment.trim() : null,
+            isFlagged: _ratingIsFlagged(itemRating),
+            comment: comment == null || comment.isEmpty
+                ? (isDraftActionItem && itemRating != null
+                      ? draft.comment.trim()
+                      : null)
+                : comment,
             createdAt: now,
             updatedAt: now,
           ),
@@ -605,29 +667,39 @@ class AppWorkspaceController extends ChangeNotifier {
     InspectionRecord record,
     InspectionFormDraft draft,
   ) {
+    final sectionKey = draft.actionSectionKey ?? _draftActionSectionKey;
+    final itemKey = draft.actionItemKey ?? _draftActionItemKey;
+    final itemLabel = draft.actionItemLabel ?? _draftActionItemLabel;
     final existing = record.actionItems.any(
       (action) =>
           !action.isAutoGenerated &&
-          action.sourceSectionKey == _draftActionSectionKey &&
-          action.sourceItemKey == _draftActionItemKey,
+          action.sourceSectionKey == sectionKey &&
+          action.sourceItemKey == itemKey,
     );
     if (existing) {
       return;
     }
     final now = DateTime.now();
+    final itemRating = draft.itemRatings[itemKey];
+    final conditionRating = itemRating == null
+        ? _conditionRatingFromDraft(draft)
+        : _conditionRatingFromItemRating(itemRating);
+    final itemComment = draft.itemComments[itemKey]?.trim();
     record.actionItems.add(
       ActionItem(
         id: _uuid.v4(),
         inspectionId: record.id,
-        sourceSectionKey: _draftActionSectionKey,
-        sourceItemKey: _draftActionItemKey,
-        conditionRating: _conditionRatingFromDraft(draft),
-        title: draft.critical
-            ? 'Critical / out-of-service follow-up'
-            : 'Inspection follow-up action',
-        description: draft.comment.trim().isEmpty
-            ? 'Review and correct the flagged inspection item.'
-            : draft.comment.trim(),
+        sourceSectionKey: sectionKey,
+        sourceItemKey: itemKey,
+        conditionRating: conditionRating,
+        title: conditionRating == ConditionRating.criticalOutOfService
+            ? 'Critical / out-of-service: $itemLabel'
+            : '$itemLabel follow-up',
+        description: itemComment == null || itemComment.isEmpty
+            ? (draft.comment.trim().isEmpty
+                  ? 'Review and correct the flagged inspection item.'
+                  : draft.comment.trim())
+            : itemComment,
         isAutoGenerated: false,
         createdAt: now,
         updatedAt: now,
@@ -635,7 +707,16 @@ class AppWorkspaceController extends ChangeNotifier {
     );
   }
 
-  String _valueForTemplateItem(InspectionFormDraft draft, String itemLabel) {
+  String _valueForTemplateItem(
+    InspectionRecord record,
+    InspectionFormDraft draft,
+    String itemKey,
+    String itemLabel,
+  ) {
+    final explicitValue = draft.itemValues[itemKey]?.trim();
+    if (explicitValue != null && explicitValue.isNotEmpty) {
+      return explicitValue;
+    }
     return switch (itemLabel) {
       'OEM' => draft.manufacturer.trim(),
       'Model' => draft.model.trim(),
@@ -645,20 +726,23 @@ class AppWorkspaceController extends ChangeNotifier {
       'Final CTS Recommendation' => draft.finalRecommendation,
       'CTS Inspector Typed Name' => draft.inspector.trim(),
       'CTS Inspector Drawn Signature' =>
-        draft.signaturePngBytes == null ? 'Not captured' : 'Captured',
+        draft.signaturePngBytes != null ||
+                (!draft.clearTechnicianSignature &&
+                    (record.signatureFilePath ?? '').trim().isNotEmpty)
+            ? 'Captured'
+            : 'Not captured',
+      'Customer Representative Signature' =>
+        draft.customerSignaturePngBytes != null ||
+                (!draft.clearCustomerSignature &&
+                    (record.customerSignatureFilePath ?? '').trim().isNotEmpty)
+            ? 'Captured'
+            : 'Not captured',
       'Component' => draft.costComponent.trim(),
       'Repair Required' => draft.costRepair.trim(),
       'Estimated Cost' => draft.costAmount.trim(),
       'Estimated Downtime' => draft.costDowntime.trim(),
-      _ => 'Good',
+      _ => '',
     };
-  }
-
-  String _draftRatingValue(InspectionFormDraft draft) {
-    if (draft.critical) {
-      return ConditionRating.criticalOutOfService.value;
-    }
-    return draft.rating;
   }
 
   ConditionRating? _conditionRatingFromDraft(InspectionFormDraft draft) {
@@ -670,6 +754,23 @@ class AppWorkspaceController extends ChangeNotifier {
       'Fair' => ConditionRating.monitorAtRisk,
       'Poor' => ConditionRating.unsatisfactory,
       _ => null,
+    };
+  }
+
+  ConditionRating? _conditionRatingFromItemRating(String rating) {
+    return switch (rating) {
+      'Good' => ConditionRating.satisfactory,
+      'Fair' => ConditionRating.monitorAtRisk,
+      'Poor' => ConditionRating.unsatisfactory,
+      'Critical / Out of Service' => ConditionRating.criticalOutOfService,
+      _ => null,
+    };
+  }
+
+  bool _ratingIsFlagged(String? rating) {
+    return switch (rating) {
+      'Fair' || 'Poor' || 'Critical / Out of Service' => true,
+      _ => false,
     };
   }
 
@@ -690,6 +791,7 @@ class AppWorkspaceController extends ChangeNotifier {
     _draftActionSectionKey,
     'Hydraulic Hose Inspection',
   );
+  static const String _draftActionItemLabel = 'Hydraulic Hose Inspection';
 
   InspectionSummary _summaryFromRecord(InspectionRecord record) {
     return InspectionSummary(

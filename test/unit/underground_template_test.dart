@@ -61,6 +61,7 @@ void main() {
       'Good',
       'Fair',
       'Poor',
+      'Critical / Out of Service',
       'N/A',
       'Not Inspected',
     ]);

@@ -116,6 +116,7 @@ class InspectionReportItem {
     required this.label,
     required this.value,
     this.conditionRating,
+    this.isExplicitlyFlagged = false,
     this.comment,
     this.photos = const <InspectionReportPhoto>[],
     this.helperText,
@@ -125,12 +126,14 @@ class InspectionReportItem {
   final String label;
   final String value;
   final ReportConditionRating? conditionRating;
+  final bool isExplicitlyFlagged;
   final String? comment;
   final List<InspectionReportPhoto> photos;
   final String? helperText;
   final List<String> tags;
 
-  bool get isFlagged => conditionRating?.isFlagged ?? false;
+  bool get isFlagged =>
+      isExplicitlyFlagged || (conditionRating?.isFlagged ?? false);
 }
 
 class InspectionReportSection {
@@ -166,6 +169,7 @@ class InspectionReportData {
     this.finalTechComments,
     this.criticalAcknowledged = false,
     this.signature,
+    this.customerSignature,
     this.actionItems = const <InspectionReportActionItem>[],
     this.branding = const InspectionReportBranding(),
   });
@@ -186,6 +190,7 @@ class InspectionReportData {
   final String? finalTechComments;
   final bool criticalAcknowledged;
   final InspectionReportSignature? signature;
+  final InspectionReportSignature? customerSignature;
   final List<InspectionReportSection> sections;
   final List<InspectionReportActionItem> actionItems;
   final InspectionReportBranding branding;

@@ -29,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
               children: const [
                 _SettingsChip(text: 'Offline-first'),
                 _SettingsChip(text: 'Local storage only'),
-                _SettingsChip(text: 'Landscape preferred'),
+                _SettingsChip(text: 'Portrait + landscape'),
                 _SettingsChip(text: 'Large touch targets'),
               ],
             ),
@@ -77,10 +77,10 @@ class _SettingsPanel extends StatelessWidget {
         children: const [
           _SettingStatusRow(
             key: Key('settings_lock_landscape'),
-            icon: Icons.screen_lock_landscape_outlined,
-            title: 'Landscape mode',
-            subtitle: 'Optimized for 10-inch Android tablets.',
-            status: 'Always on',
+            icon: Icons.screen_rotation_outlined,
+            title: 'Adaptive orientation',
+            subtitle: 'Responsive in portrait and landscape tablet layouts.',
+            status: 'Automatic',
           ),
           _SettingStatusRow(
             key: Key('settings_compress_images'),

@@ -60,9 +60,26 @@ class UndergroundTemplate {
     'Good',
     'Fair',
     'Poor',
+    'Critical / Out of Service',
     'N/A',
     'Not Inspected',
   ];
+
+  static const Set<String> nonChecklistSectionKeys = <String>{
+    'machine_identification',
+    'condition_monitoring_results',
+    'life_extension_assessment',
+    'rebuild_recommendations',
+    'estimated_rebuild_cost_forecast',
+    'photographic_evidence',
+    'final_recommendation_signoff',
+  };
+
+  static const Set<String> narrativeSectionKeys = <String>{
+    'condition_monitoring_results',
+    'life_extension_assessment',
+    'rebuild_recommendations',
+  };
 
   static const List<String> assetStatusOptions = <String>[
     'Excellent',
@@ -486,6 +503,28 @@ class UndergroundTemplate {
     return sections.firstWhere(
       (UndergroundTemplateSection section) => section.key == key,
     );
+  }
+
+  static List<UndergroundTemplateSection> get conditionChecklistSections {
+    return sections
+        .where(
+          (UndergroundTemplateSection section) =>
+              isConditionChecklistSectionKey(section.key),
+        )
+        .toList(growable: false);
+  }
+
+  static List<UndergroundTemplateSection> get narrativeSections {
+    return sections
+        .where(
+          (UndergroundTemplateSection section) =>
+              narrativeSectionKeys.contains(section.key),
+        )
+        .toList(growable: false);
+  }
+
+  static bool isConditionChecklistSectionKey(String key) {
+    return !nonChecklistSectionKeys.contains(key);
   }
 
   static String sectionTitleFor(String key) => sectionByKey(key).title;
