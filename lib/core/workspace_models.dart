@@ -264,8 +264,17 @@ class InspectionFormDraft {
     required this.costRepair,
     required this.costAmount,
     required this.costDowntime,
+    this.itemRatings = const <String, String>{},
+    this.itemComments = const <String, String>{},
+    this.itemValues = const <String, String>{},
     this.signaturePngBytes,
+    this.customerSignaturePngBytes,
+    this.clearTechnicianSignature = false,
+    this.clearCustomerSignature = false,
     this.createActionItem = false,
+    this.actionSectionKey,
+    this.actionItemKey,
+    this.actionItemLabel,
   });
 
   final String inspectionId;
@@ -289,6 +298,15 @@ class InspectionFormDraft {
   final String costRepair;
   final String costAmount;
   final String costDowntime;
+  final Map<String, String> itemRatings;
+  final Map<String, String> itemComments;
+  final Map<String, String> itemValues;
   final Uint8List? signaturePngBytes;
+  final Uint8List? customerSignaturePngBytes;
+  final bool clearTechnicianSignature;
+  final bool clearCustomerSignature;
   final bool createActionItem;
+  final String? actionSectionKey;
+  final String? actionItemKey;
+  final String? actionItemLabel;
 }

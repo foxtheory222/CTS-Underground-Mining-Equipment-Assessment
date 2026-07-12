@@ -1,6 +1,6 @@
 # CTS Underground Mining Equipment Assessment
 
-CTS Underground Mining Equipment Assessment is an offline-only Flutter tablet application for underground mining equipment assessment reporting in the field. It is designed for Android tablets in landscape orientation and stores all data locally on the device.
+CTS Underground Mining Equipment Assessment is an offline-only Flutter tablet application for underground mining equipment assessment reporting in the field. It adapts to Android tablets in portrait or landscape orientation and stores all data locally on the device.
 
 ## What It Does
 - Create, edit, duplicate, search, export, and import inspection records.
@@ -40,7 +40,7 @@ CTS Underground Mining Equipment Assessment is an offline-only Flutter tablet ap
 ## Local Setup
 1. Install the Flutter stable SDK.
 2. Install Android Studio and the Android SDK.
-3. Create or open an Android tablet emulator, preferably in landscape mode.
+3. Create or open an Android tablet emulator in portrait or landscape mode.
 4. Run `flutter pub get`.
 5. Run `dart format .`.
 6. Run `flutter analyze`.
@@ -48,7 +48,7 @@ CTS Underground Mining Equipment Assessment is an offline-only Flutter tablet ap
 
 ## Run On Emulator
 1. Start a tablet emulator such as Pixel Tablet.
-2. Verify the emulator is in landscape orientation.
+2. Verify the app responds correctly in portrait and landscape orientations.
 3. Launch the app with `flutter run`.
 4. Complete the inspection flow described in [Test Plan](docs/TEST_PLAN.md).
 

@@ -1,5 +1,6 @@
 import '../core/constants.dart';
 import '../core/underground_template.dart';
+import '../core/validators.dart';
 import '../data/models/inspection_enums.dart';
 import '../data/models/inspection_models.dart';
 import '../features/pdf_report/pdf_report_models.dart';
@@ -22,6 +23,7 @@ InspectionReportData inspectionRecordToReportData(InspectionRecord record) {
     finalTechComments: record.finalTechComments,
     criticalAcknowledged: record.criticalAcknowledged,
     signature: _reportSignature(record),
+    customerSignature: _customerReportSignature(record),
     sections: _reportSections(record),
     actionItems: record.actionItems.map(_reportActionItem).toList(),
     branding: const InspectionReportBranding(
@@ -160,6 +162,7 @@ InspectionReportItem _reportItem(
     label: response.itemLabel,
     value: _display(response.value),
     conditionRating: _reportConditionRating(response.conditionRating),
+    isExplicitlyFlagged: response.isFlagged,
     comment: response.comment,
     photos: record.photos
         .where(
@@ -207,6 +210,28 @@ InspectionReportSignature? _reportSignature(InspectionRecord record) {
   return InspectionReportSignature(
     filePath: path,
     signerName: record.technicianName,
+    signedAt: record.completedAt ?? record.updatedAt,
+  );
+}
+
+InspectionReportSignature? _customerReportSignature(InspectionRecord record) {
+  final path = (record.customerSignatureFilePath ?? '').trim();
+  if (path.isEmpty) {
+    return null;
+  }
+  final representativeKey = InspectionValidator.templateItemKey(
+    'final_recommendation_signoff',
+    'Customer Representative Name',
+  );
+  final representative = record
+      .responseByKey('final_recommendation_signoff', representativeKey)
+      ?.value
+      ?.trim();
+  return InspectionReportSignature(
+    filePath: path,
+    signerName: representative == null || representative.isEmpty
+        ? (record.customer.trim().isEmpty ? 'Customer' : record.customer)
+        : representative,
     signedAt: record.completedAt ?? record.updatedAt,
   );
 }

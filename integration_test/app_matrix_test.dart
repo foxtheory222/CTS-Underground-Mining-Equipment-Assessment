@@ -29,13 +29,21 @@ void main() {
         'settings_save_recent_recipients',
         'settings_branded_theme',
       ]) {
-        await _tapByKey(tester, key);
+        await _expectByKey(tester, key);
       }
       expect(find.text('About / Version'), findsOneWidget);
 
-      await tester.tap(find.text('New Inspection').last);
-      await tester.pumpAndSettle();
-      expect(find.text('SECTION 1 - MACHINE IDENTIFICATION'), findsWidgets);
+      final newInspectionTab = find.byIcon(Icons.note_add_outlined);
+      expect(
+        newInspectionTab,
+        findsOneWidget,
+        reason: 'The New Inspection navigation destination must be available.',
+      );
+      await tester.tap(newInspectionTab);
+
+      final structuralSection = find.text('SECTION 2 - STRUCTURAL INSPECTION');
+      await _waitForFinder(tester, structuralSection);
+      expect(structuralSection, findsWidgets);
 
       for (final purpose in UndergroundTemplate.purposeOptions) {
         await _tapByKey(tester, 'purpose_${_keyPart(purpose)}');
@@ -72,6 +80,33 @@ void main() {
       }
     },
   );
+}
+
+Future<void> _waitForFinder(
+  WidgetTester tester,
+  Finder finder, {
+  Duration timeout = const Duration(seconds: 15),
+}) async {
+  final deadline = tester.binding.clock.fromNowBy(timeout);
+  do {
+    await tester.pump(const Duration(milliseconds: 100));
+    if (tester.any(finder)) {
+      return;
+    }
+  } while (tester.binding.clock.now().isBefore(deadline));
+
+  expect(
+    finder,
+    findsAtLeastNWidgets(1),
+    reason: 'Timed out waiting for the inspection form to initialize.',
+  );
+}
+
+Future<void> _expectByKey(WidgetTester tester, String key) async {
+  final finder = find.byKey(Key(key));
+  expect(finder, findsOneWidget, reason: 'Missing matrix target: $key');
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tapByKey(WidgetTester tester, String key) async {

@@ -98,10 +98,44 @@ void main() {
       );
       expect(find.text(UndergroundTemplate.templateKey), findsOneWidget);
       expect(find.text('Android tablet local-only V1'), findsOneWidget);
-      expect(find.text('App version 1.0.0+1'), findsOneWidget);
+      expect(find.text('App version 1.1.0+2'), findsOneWidget);
       expect(find.text('Build profile development'), findsOneWidget);
       expect(find.byType(SwitchListTile), findsNothing);
-      expect(find.text('Always on'), findsNWidgets(4));
+      expect(find.text('Automatic'), findsOneWidget);
+      expect(find.text('Always on'), findsNWidgets(3));
     },
   );
+
+  testWidgets('compact portrait layout uses accessible bottom navigation', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.text('Dashboard'), findsWidgets);
+    expect(find.text('Critical Reports'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Adaptive orientation'), findsOneWidget);
+    expect(find.text('Automatic'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('New').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('SECTION 1 - MACHINE IDENTIFICATION'), findsWidgets);
+    expect(
+      find.byKey(const Key('mark_unreviewed_good_button')),
+      findsOneWidget,
+    );
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
